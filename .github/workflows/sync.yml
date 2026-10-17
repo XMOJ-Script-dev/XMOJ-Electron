@@ -8,30 +8,19 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
-  sync-branches:
+  sync-dev-to-extern-contrib:
     runs-on: ubuntu-latest
-    name: Syncing branches
+    name: Sync dev → extern-contrib
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Check the target branch exists
-        id: check
-        run: |
-          if git ls-remote --exit-code --heads origin master > /dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Branch master does not exist yet, skipping the sync."
-          fi
-
-      - name: Opening pull request
-        if: steps.check.outputs.exists == 'true'
-        uses: tretuna/sync-branches@1.4.0
         with:
-          GITHUB_TOKEN: ${{ secrets.TOKEN || secrets.GITHUB_TOKEN }}
-          FROM_BRANCH: "dev"
-          TO_BRANCH: "master"
+          fetch-depth: 0
+
+      - name: Push dev → extern-contrib
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git push origin HEAD:refs/heads/extern-contrib
