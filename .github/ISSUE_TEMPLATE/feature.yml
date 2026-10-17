@@ -1,0 +1,48 @@
+name: Feature request
+description: 为 XMOJ Electron 提出一个新功能
+title: "[Feature] 请描述你希望看到的功能"
+labels: ["enhancement"]
+type: "Feature"
+assignees: ["zsTree0830"]
+
+body:
+- type: markdown
+  attributes:
+    value: "很高兴你能来！请填写下面的表单，为 XMOJ Electron 提出新功能建议："
+- type: checkboxes
+  id: confirm
+  attributes:
+    label: 提交前确认
+    options:
+    - label: 我已确认自己使用的是最新版本的 XMOJ Electron。
+      required: true
+    - label: 这个功能在最新版本中还不存在。
+      required: true
+    - label: 我已搜索过 [Issues](https://github.com/XMOJ-Script-dev/XMOJ-Electron/issues)，确认没有人提过同样的需求。
+      required: true
+    - label: 我愿意参与实现这个功能。
+      required: false
+- type: textarea
+  id: description
+  attributes:
+    label: 功能描述
+    description: "描述得越具体，我们越容易把它做出来。"
+    placeholder: "描述你希望增加的功能"
+  validations:
+    required: true
+- type: textarea
+  id: reason
+  attributes:
+    label: 提出理由
+    description: "请说明为什么需要这个功能，以及它解决了什么问题。"
+    placeholder: "说明这个功能为什么有用"
+  validations:
+    required: true
+- type: input
+  id: upstream
+  attributes:
+    label: 对应的用户脚本功能
+    description: "如果 XMOJ 用户脚本里已经有这个功能，请写出它的名字或相关代码位置。"
+    placeholder: "XMOJ.user.js 里的 NewDownload / 比赛排名 ……"
+  validations:
+    required: false

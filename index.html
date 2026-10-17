@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XMOJ Electron</title>
+    <!--
+      Content Security Policy.
+
+      `unsafe-inline` is required for styles because Vue's scoped styles and
+      Monaco both inject <style> at runtime, and KaTeX emits inline styles.
+      Scripts stay strict: only same-origin bundles run.
+
+      Allowed remote origins:
+        xmoj.tech / static.xmoj.tech   problem statements and judge images
+        cravatar.cn / cn.cravatar.com  user avatars (cravatar redirects to `cn.`)
+        assets.xmoj-script.uk          community-hosted images
+        fonts.googleapis.com/gstatic   the Inter webfont
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' data: https://fonts.gstatic.com;
+        img-src 'self' data: blob: https://www.xmoj.tech https://static.xmoj.tech https://cravatar.cn https://cn.cravatar.com https://assets.xmoj-script.uk;
+        connect-src 'self' https://www.xmoj.tech https://api.xmoj-script.uk https://api.xmoj-bbs.me https://api.xmoj-bbs.tech https://cravatar.cn https://cn.cravatar.com;
+        media-src 'self' https://www.xmoj.tech;
+        worker-src 'self' blob:;
+        object-src 'none';
+        base-uri 'self';
+        form-action 'none';
+      "
+    />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
