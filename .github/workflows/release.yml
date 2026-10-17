@@ -9,75 +9,145 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  release:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
+      prerelease: ${{ steps.ver.outputs.prerelease }}
+      publish: ${{ steps.ver.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Parse version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF="${{ github.ref_name }}"
+          INPUT_TAG="${{ github.event.inputs.tag }}"
+
+          if [[ "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG="$REF"; PUBLISH=true
+          elif ; then
+            TAG="$INPUT_TAG"; PUBLISH=true
+            git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1 \
+
+              || { echo "::error::tag 不存在: $TAG"; exit 1; }
+          else
+            TAG="$REF"; PUBLISH=false
+          fi
+
+          VERSION="${TAG#v}"
+
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.([0-9]+)$ ]]; then
+            PATCH="${BASH_REMATCH[1]}"
+            if ; then PRE=false; else PRE=true; fi
+          else
+            echo "::error::无法识别的版本号: $VERSION"; exit 1
+          fi
+
+          {
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+            echo "prerelease=$PRE"
+            echo "publish=$PUBLISH"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG version=$VERSION prerelease=$PRE publish=$PUBLISH"
+
+  build:
+    needs: meta
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            platform: Windows
+            platform: win
           - os: macos-latest
-            platform: macOS
+            platform: mac
           - os: ubuntu-latest
-            platform: Linux
-
+            platform: linux
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 26
+          node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Parse version
-        id: version
-        shell: bash
-        run: |
-          TAG="${{ github.ref_name }}"
-          if [[ "$TAG" == v* ]]; then
-            VERSION="${TAG#v}"
-          else
-            VERSION="$(node -p "require('./package.json').version")"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if [[ "$VERSION" == *-* ]] || [[ "${VERSION##*.}" == "0" ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
+      - run: npm ci
+      - run: npm run typecheck
 
       - name: Build installers
-        run: npm run build
+        run: |
+          if ; then
+            npx electron-builder --publish never
+          else
+            npm run build
+          fi
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.TOKEN }}
 
-      - name: List built artifacts
+      - name: Verify artifacts
         shell: bash
-        run: ls -R "release/${{ steps.version.outputs.version }}" || true
+        run: |
+          set -euo pipefail
+          DIR="release/${{ needs.meta.outputs.version }}"
+          test -d "$DIR" || { echo "::error::产物目录不存在: $DIR"; exit 1; }
+          ls -l "$DIR"
+          case "${{ matrix.platform }}" in
+            win)   compgen -G "$DIR/*.exe" > /dev/null || { echo "::error::缺少 exe"; exit 1; } ;;
+            mac)   compgen -G "$DIR/*.dmg" > /dev/null || { echo "::error::缺少 dmg"; exit 1; } ;;
+            linux) compgen -G "$DIR/*.AppImage" > /dev/null || { echo "::error::缺少 AppImage"; exit 1; } ;;
+          esac
 
-      - name: Create Release and upload assets
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
         with:
-          name: "XMOJ Electron ${{ github.ref_name }}"
+          name: dist-${{ matrix.platform }}
+          path: release/${{ needs.meta.outputs.version }}/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [meta, build]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Show assets
+        run: ls -lR dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: ${{ needs.meta.outputs.tag }}
           generate_release_notes: true
-          fail_on_unmatched_files: false
-          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
-          files: |
-            release/${{ steps.version.outputs.version }}/*.exe
-            release/${{ steps.version.outputs.version }}/*.dmg
-            release/${{ steps.version.outputs.version }}/*.AppImage
-            release/${{ steps.version.outputs.version }}/*.zip
-            release/${{ steps.version.outputs.version }}/latest*.yml
-            release/${{ steps.version.outputs.version }}/*.blockmap
+          prerelease: ${{ needs.meta.outputs.prerelease == 'true' }}
+          fail_on_unmatched_files: true
+          files: dist/*
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
