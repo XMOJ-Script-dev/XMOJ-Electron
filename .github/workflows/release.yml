@@ -3,60 +3,45 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+      - 'v*.*.*'
 
 jobs:
-  meta:
-    runs-on: ubuntu-latest
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     outputs:
-      tag: ${{ steps.ver.outputs.tag }}
-      version: ${{ steps.ver.outputs.version }}
-      prerelease: ${{ steps.ver.outputs.prerelease }}
-      publish: ${{ steps.ver.outputs.publish }}
+      tag: ${{ steps.parse-version.outputs.tag }}
+      version: ${{ steps.parse-version.outputs.version }}
+      prerelease: ${{ steps.parse-version.outputs.prerelease }}
+      publish: ${{ steps.parse-version.outputs.publish }}
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
       - name: Parse version
-        id: ver
+        id: parse-version
         shell: bash
         run: |
           set -euo pipefail
           REF="${{ github.ref_name }}"
-          INPUT_TAG="${{ github.event.inputs.tag }}"
+          INPUT_TAG="${{ inputs.tag }}"
 
           if [[ "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             TAG="$REF"; PUBLISH=true
-          elif ; then
+          elif [[ -n "$INPUT_TAG" ]]; then
             TAG="$INPUT_TAG"; PUBLISH=true
             git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1 \
-
-              || { echo "::error::tag 不存在: $TAG"; exit 1; }
+            || { echo "::error::tag 不存在: $TAG"; exit 1; }
           else
             TAG="$REF"; PUBLISH=false
           fi
 
           VERSION="${TAG#v}"
 
-          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.([0-9]+)$ ]]; then
-            PATCH="${BASH_REMATCH[1]}"
-            if ; then PRE=false; else PRE=true; fi
+          if [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            PRE=false
           else
             echo "::error::无法识别的版本号: $VERSION"; exit 1
           fi
@@ -69,85 +54,60 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "tag=$TAG version=$VERSION prerelease=$PRE publish=$PUBLISH"
 
-  build:
-    needs: meta
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: mac
-          - os: ubuntu-latest
-            platform: linux
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-      - run: npm run typecheck
-
-      - name: Build installers
-        run: |
-          if ; then
-            npx electron-builder --publish never
-          else
-            npm run build
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.TOKEN }}
-
-      - name: Verify artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          DIR="release/${{ needs.meta.outputs.version }}"
-          test -d "$DIR" || { echo "::error::产物目录不存在: $DIR"; exit 1; }
-          ls -l "$DIR"
-          case "${{ matrix.platform }}" in
-            win)   compgen -G "$DIR/*.exe" > /dev/null || { echo "::error::缺少 exe"; exit 1; } ;;
-            mac)   compgen -G "$DIR/*.dmg" > /dev/null || { echo "::error::缺少 dmg"; exit 1; } ;;
-            linux) compgen -G "$DIR/*.AppImage" > /dev/null || { echo "::error::缺少 AppImage"; exit 1; } ;;
-          esac
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ matrix.platform }}
-          path: release/${{ needs.meta.outputs.version }}/
-          if-no-files-found: error
-          retention-days: 7
-
-  publish:
-    needs: [meta, build]
-    if: needs.meta.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
+          ref: ${{ steps.parse-version.outputs.tag }}
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          pattern: dist-*
-          path: dist
-          merge-multiple: true
+          node-version: 20
+          cache: 'pnpm'
 
-      - name: Show assets
-        run: ls -lR dist
-
-      - uses: softprops/action-gh-release@v2
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          tag_name: ${{ needs.meta.outputs.tag }}
-          name: ${{ needs.meta.outputs.tag }}
-          generate_release_notes: true
-          prerelease: ${{ needs.meta.outputs.prerelease == 'true' }}
-          fail_on_unmatched_files: true
-          files: dist/*
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Build Electron App
+        run: pnpm electron-builder
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-${{ steps.parse-version.outputs.version }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+
+  create-release:
+    needs: release
+    if: ${{ needs.release.outputs.publish == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          name: Release ${{ needs.release.outputs.tag }}
+          prerelease: ${{ needs.release.outputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
