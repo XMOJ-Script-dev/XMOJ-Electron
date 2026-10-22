@@ -68,11 +68,31 @@ src/
 
 ```bash
 npm install
+npx install-electron    # 下载 Electron 二进制（见下）
 npm run dev            # 启动 Vite + Electron 开发环境
 npm run typecheck      # vue-tsc 类型检查
 npm run build          # 类型检查 + 构建 + 打包安装程序
 npm run build:dir      # 只产出未打包的目录，便于本地验证
 ```
+
+`electron` 43.x 的 npm 包**没有 `postinstall`**（只提供 `install-electron` 这个 bin），
+所以 `npm install` 之后 `node_modules/electron/dist` 是空的，`npm run dev` 和
+`npm run test:e2e` 都会因为找不到 Electron 而失败。装一次即可：
+
+```bash
+npx install-electron
+```
+
+如果所在网络连不上 `github.com`（打包时 electron-builder 要从 GitHub Releases 取
+electron zip、NSIS 和 winCodeSign），用镜像：
+
+```bash
+export ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+export ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/
+```
+
+Windows PowerShell 对应 `$env:ELECTRON_MIRROR = '...'`。GitHub Actions runner 能直连
+GitHub，CI 里不需要这两个变量。
 
 ### 测试
 

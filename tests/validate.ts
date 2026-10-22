@@ -1,9 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { CookieJar, isTrustedHost } from '../electron/http.ts';
 import { parseHomeSnapshot, parseProblemsetPage, parseStatusPage, parseProfile, parseProfileScript, parseServerTime, parseLoginAlert, isAlreadyLoggedInResponse, isLoginFailureAlert, isLoginGate, isLoginForm, parseCountdown, describeVerdictCode, verdictCodeFromLabel, extractSubmissionId, formatMemory, formatTime, } from '../electron/parsers.ts';
 const here = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
+const skippedFixtures: string[] = [];
+const canRead = (name: string): boolean => {
+    if (existsSync(path.join(here, name)))
+        return true;
+    if (!skippedFixtures.includes(name))
+        skippedFixtures.push(name);
+    return false;
+};
 const read = (name: string) => readFileSync(path.join(here, name), 'utf8');
 let failures = 0;
 function check(label: string, condition: boolean, detail = '') {
@@ -13,7 +21,7 @@ function check(label: string, condition: boolean, detail = '') {
     console.log(`  [${status}] ${label}${detail ? ` :: ${detail}` : ''}`);
 }
 console.log('\n=== index.html -> HomeSnapshot ===');
-{
+if (canRead('index.html')) {
     const html = read('index.html');
     const snap = parseHomeSnapshot(html, Date.now());
     console.log(`  announcements=${snap.announcements.length} banners=${snap.banners.length}`);
@@ -27,7 +35,7 @@ console.log('\n=== index.html -> HomeSnapshot ===');
     console.log('  banners:', snap.banners.map((b) => b.src.split('/').pop()).join(', '));
 }
 console.log('\n=== loginpage.html -> profile / alert ===');
-{
+if (canRead('loginpage.html')) {
     const html = read('loginpage.html');
     const info = parseProfile(html);
     check('profileText === Login', info.profileText === 'Login', info.profileText);
@@ -36,7 +44,7 @@ console.log('\n=== loginpage.html -> profile / alert ===');
     check('isAlreadyLoggedIn false', isAlreadyLoggedInResponse(html) === false);
 }
 console.log('\n=== contest.html -> embedded server clock ===');
-{
+if (canRead('contest.html')) {
     const html = read('contest.html');
     const t = parseServerTime(html);
     check('serverTime parsed from var diff=', t !== null, String(t));
@@ -57,14 +65,14 @@ console.log('\n=== already-logged-in sentinel ===');
     check('sentinel detected', isAlreadyLoggedInResponse('<a href=logout.php>Please logout First!</a>'));
 }
 console.log('\n=== problemset.html (login gate) ===');
-{
+if (canRead('problemset.html')) {
     const html = read('problemset.html');
     check('login gate detected', isLoginGate(html));
     const page = parseProblemsetPage(html, 1);
     check('no problems parsed from gate', page.problems.length === 0, `got ${page.problems.length}`);
 }
 console.log('\n=== contest.html -> problemset parser (real table) ===');
-{
+if (canRead('contest.html')) {
     const html = read('contest.html');
     const page = parseProblemsetPage(html, 1);
     console.log(`  rows parsed=${page.problems.length} totalPages=${page.totalPages}`);
@@ -109,7 +117,7 @@ console.log('\n=== synthetic HUSTOJ status row ===');
     check('missing memory is null', c?.memoryKb === null, String(c?.memoryKb));
 }
 console.log('\n=== LIVE index.php snapshot (real countdown literal) ===');
-{
+if (canRead('index.html')) {
     const html = read('index.html');
     const snap = parseHomeSnapshot(html, Date.now());
     console.log(`  announcements=${snap.announcements.length} countdown=${snap.countdown.length} banners=${snap.banners.length}`);
@@ -149,8 +157,10 @@ console.log('\n=== #profile variants (Login vs 登录 vs handle) ===');
 }
 console.log('\n=== login form detection ===');
 {
-    check('loginpage is a form', isLoginForm(read('loginpage.html')));
-    check('index is not a form', isLoginForm(read('index.html')) === false);
+    if (canRead('loginpage.html'))
+        check('loginpage is a form', isLoginForm(read('loginpage.html')));
+    if (canRead('index.html'))
+        check('index is not a form', isLoginForm(read('index.html')) === false);
     check('failure alert recognised', isLoginFailureAlert(parseLoginAlert("alert('UserName or Password Wrong!');")));
     check('benign alert not a failure', isLoginFailureAlert('Welcome back') === false);
 }
@@ -314,6 +324,11 @@ console.log('\n=== cookie jar accepts trusted backends, rejects others ===');
     jar.store(['bbs2=xyz; path=/'], bbsUrl);
     check('stores a cookie from xmoj-bbs.me', jar.get('bbs2') === 'xyz', String(jar.get('bbs2')));
     check('does not send backend cookies to the judge', !(jar.headerFor(new URL('https://www.xmoj.tech/index.php')) ?? '').includes('bbs2'), String(jar.headerFor(new URL('https://www.xmoj.tech/index.php'))));
+}
+if (skippedFixtures.length > 0) {
+    console.log(`\n=== skipped ${skippedFixtures.length} snapshot-based block(s) ===`);
+    console.log(`  missing: ${skippedFixtures.join(', ')}`);
+    console.log('  these live in tests/fixtures/, which is gitignored; capture them to run the checks above');
 }
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`);
 process.exit(failures === 0 ? 0 : 1);

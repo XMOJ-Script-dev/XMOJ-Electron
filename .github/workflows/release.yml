@@ -4,14 +4,32 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag，例如 v1.0.1；留空则只构建不发布'
+        required: false
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            platform: win
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
 
     outputs:
       tag: ${{ steps.parse-version.outputs.tag }}
@@ -20,6 +38,11 @@ jobs:
       publish: ${{ steps.parse-version.outputs.publish }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Parse version
         id: parse-version
         shell: bash
@@ -33,15 +56,20 @@ jobs:
           elif [[ -n "$INPUT_TAG" ]]; then
             TAG="$INPUT_TAG"; PUBLISH=true
             git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1 \
-            || { echo "::error::tag 不存在: $TAG"; exit 1; }
+              || { echo "::error::tag 不存在: $TAG"; exit 1; }
           else
             TAG="$REF"; PUBLISH=false
           fi
 
-          VERSION="${TAG#v}"
+          if [[ "$PUBLISH" == "true" ]]; then
+            VERSION="${TAG#v}"
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+          fi
 
           if [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            PRE=false
+            PATCH="${BASH_REMATCH[3]}"
+            if [[ "$PATCH" == "0" ]]; then PRE=false; else PRE=true; fi
           else
             echo "::error::无法识别的版本号: $VERSION"; exit 1
           fi
@@ -54,60 +82,79 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "tag=$TAG version=$VERSION prerelease=$PRE publish=$PUBLISH"
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.parse-version.outputs.tag }}
-          fetch-depth: 0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
-      - name: Build
-        run: pnpm build
+      - name: Typecheck
+        run: npm run typecheck
 
-      - name: Build Electron App
-        run: pnpm electron-builder
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Build renderer
+        run: npx vite build
+
+      - name: Build installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx electron-builder --publish never
+
+      - name: Verify artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="release/${{ steps.parse-version.outputs.version }}"
+          test -d "$DIR" || { echo "::error::产物目录不存在: $DIR"; exit 1; }
+          ls -l "$DIR"
+          case "${{ matrix.platform }}" in
+            win)   compgen -G "$DIR/*.exe" > /dev/null || { echo "::error::缺少 exe"; exit 1; } ;;
+            mac)   compgen -G "$DIR/*.dmg" > /dev/null || { echo "::error::缺少 dmg"; exit 1; } ;;
+            linux) compgen -G "$DIR/*.AppImage" > /dev/null || { echo "::error::缺少 AppImage"; exit 1; } ;;
+          esac
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ steps.parse-version.outputs.version }}
+          name: dist-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 7
           path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
-            dist/*.deb
+            release/${{ steps.parse-version.outputs.version }}/*.exe
+            release/${{ steps.parse-version.outputs.version }}/*.dmg
+            release/${{ steps.parse-version.outputs.version }}/*.AppImage
+            release/${{ steps.parse-version.outputs.version }}/*.deb
+            release/${{ steps.parse-version.outputs.version }}/*.blockmap
+            release/${{ steps.parse-version.outputs.version }}/latest*.yml
 
   create-release:
     needs: release
-    if: ${{ needs.release.outputs.publish == 'true' }}
+    if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Show assets
+        run: ls -lR dist
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release.outputs.tag }}
           name: Release ${{ needs.release.outputs.tag }}
-          prerelease: ${{ needs.release.outputs.prerelease }}
+          prerelease: ${{ needs.release.outputs.prerelease == 'true' }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/*
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN || secrets.GITHUB_TOKEN }}

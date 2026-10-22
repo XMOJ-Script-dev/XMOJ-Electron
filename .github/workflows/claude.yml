@@ -42,8 +42,21 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Check the API key is configured
+        id: config
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          if [ -n "$DEEPSEEK_API_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secret DEEPSEEK_API_KEY is not set, so @claude is skipped."
+          fi
+
       - name: Run Claude Code
         id: claude
+        if: steps.config.outputs.configured == 'true'
         uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic

@@ -106,6 +106,15 @@ jobs:
             (New-Object System.Text.UTF8Encoding $false)
           )
 
+      - name: Install Electron binary
+        if: env.XMOJ_ACCOUNT != ''
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'node_modules/electron/dist')) {
+            npx install-electron
+            if ($LASTEXITCODE -ne 0) { throw 'install-electron failed' }
+          }
+
       - name: Run suites
         if: env.XMOJ_ACCOUNT != ''
         shell: pwsh
