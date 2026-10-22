@@ -2,7 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Discussions
     url: https://github.com/XMOJ-Script-dev/XMOJ-Electron/discussions
-    about: 在这里提问、交流想法
-  - name: XMOJ 用户脚本
-    url: https://github.com/XMOJ-Script-dev/XMOJ-Script
-    about: 网页端脚本本体的问题请反馈到这里
+    about: 在这里 Q&A 或讨论任何关于 XMOJ Electron 的问题

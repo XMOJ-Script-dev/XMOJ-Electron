@@ -5,19 +5,6 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>XMOJ Electron</title>
-    <!--
-      Content Security Policy.
-
-      `unsafe-inline` is required for styles because Vue's scoped styles and
-      Monaco both inject <style> at runtime, and KaTeX emits inline styles.
-      Scripts stay strict: only same-origin bundles run.
-
-      Allowed remote origins:
-        xmoj.tech / static.xmoj.tech   problem statements and judge images
-        cravatar.cn / cn.cravatar.com  user avatars (cravatar redirects to `cn.`)
-        assets.xmoj-script.uk          community-hosted images
-        fonts.googleapis.com/gstatic   the Inter webfont
-    -->
     <meta
       http-equiv="Content-Security-Policy"
       content="

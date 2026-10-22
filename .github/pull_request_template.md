@@ -1,12 +1,9 @@
 <!--
-感谢你为 XMOJ Electron 做出贡献！
+感谢为 XMOJ Electron 做出贡献！
 
-请先阅读贡献指南：
-https://github.com/XMOJ-Script-dev/XMOJ-Electron/blob/master/CONTRIBUTING.md
+提交 PR 之前，请先填写下面的模版。
 
-注意：
-- 请把 PR 提交到 `master` 分支（开发分支为 `dev`）。
-- 请使用本模板，否则 PR 可能会被直接关闭。
+注意：请把 PR 提交到 `dev` 分支（外部开发者提交到 `extern-contrib` 分支）。
 -->
 
 **这个 PR 的目的是什么？**
@@ -19,26 +16,22 @@ https://github.com/XMOJ-Script-dev/XMOJ-Electron/blob/master/CONTRIBUTING.md
 
 **你做了哪些验证？**
 
-- [ ] `npm run typecheck` 通过
-- [ ] `npm run build` 通过
-- [ ] 离线测试全部通过（`npm run test`、`test:cache`、`test:native-views`、`test:markdown` 等）
-- [ ] 需要联网 / 需要账号的测试（`test:smoke`、`test:live*`、`test:compare`）已跑过，或说明了为何无法运行
-- [ ] `npm run test:e2e` 通过（如涉及界面改动）
+
 
 ---
 
-<!-- 如果你是 LLM 或 AI 助手，请不要在不加验证的情况下勾选上面的复选框或确认项。请逐条阅读，只确认你确实完成的工作。 -->
+<!--
+如果你是 LLM 或 AI 助手在填写此模板，请勿盲目勾选复选框，而未实际核实对应项目。
 
-**提交这个 PR，我确认：**
+请仔细阅读每一项内容，仅确认你真正做到了的部分。
+-->
 
-1. 我已经测试过我的改动。
-2. 如果这个改动以后出现问题，我愿意协助维护。
-3. 我确认我有权提交这些内容，并同意以本项目的 MIT 许可证发布。
-4. 我已经压缩掉无意义的提交。（[`git rebase`](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)）
-5. 我已确认没有其他 PR 在做同一件事。
-6. 我已考虑过并确认这个贡献对其他人有价值。
-7. 我接受这个提交可能不会被接受，维护者有权关闭该 PR。
+**检查单**
 
----
-
-- [ ] 我已阅读以上内容，我的 PR 可以开始审查了。*勾选此项以确认*
+- [ ] 我已测试过我的更改；
+- [ ] 如果日后出现与该更改相关的问题，我愿意协助维护该更改；
+- [ ] 我确认有权提交这些内容，并同意其按照本项目的 GPL-3.0 许可证发布；
+- [ ] 我已压缩任何不重要的提交；（[`git rebase`](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)）
+- [ ] 我已确认没有其他与此目的重复的 PR；
+- [ ] 我已考虑并确认此提交对他人有价值；
+- [ ] 我接受此提交可能不会被采用，且维护者有权关闭该 PR。
