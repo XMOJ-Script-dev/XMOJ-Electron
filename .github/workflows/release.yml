@@ -50,6 +50,7 @@ jobs:
           set -euo pipefail
           REF="${{ github.ref_name }}"
           INPUT_TAG="${{ inputs.tag }}"
+          APP_VERSION="$(node -p "require('./package.json').version")"
 
           if [[ "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             TAG="$REF"; PUBLISH=true
@@ -63,8 +64,12 @@ jobs:
 
           if [[ "$PUBLISH" == "true" ]]; then
             VERSION="${TAG#v}"
+            if [[ "$VERSION" != "$APP_VERSION" ]]; then
+              echo "::error::tag 是 $TAG，但 package.json 的版本是 $APP_VERSION；electron-builder 会输出到 release/$APP_VERSION，先 npm version $VERSION 再打 tag"
+              exit 1
+            fi
           else
-            VERSION="$(node -p "require('./package.json').version")"
+            VERSION="$APP_VERSION"
           fi
 
           if [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
