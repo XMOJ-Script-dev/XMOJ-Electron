@@ -106,6 +106,21 @@ jobs:
             (New-Object System.Text.UTF8Encoding $false)
           )
 
+      - name: Validate test account
+        if: env.XMOJ_ACCOUNT != ''
+        shell: pwsh
+        run: |
+          $lines = Get-Content 'tests/account.txt' -ErrorAction Stop
+          $hasUser = @($lines | Where-Object { $_ -match '^\s*Username\s*[:=]\s*\S' }).Count -gt 0
+          $hasPass = @($lines | Where-Object { $_ -match '^\s*Password\s*[:=]\s*\S' }).Count -gt 0
+          Write-Host "account.txt lines: $($lines.Count)"
+          Write-Host "has Username: $hasUser"
+          Write-Host "has Password: $hasPass"
+          if (-not ($hasUser -and $hasPass)) {
+            Write-Host "::error title=XMOJ_ACCOUNT format::Secret XMOJ_ACCOUNT must contain two lines: 'Username: <user>' and 'Password: <pass>'"
+            exit 1
+          }
+
       - name: Install Electron binary
         if: env.XMOJ_ACCOUNT != ''
         shell: pwsh
@@ -118,9 +133,8 @@ jobs:
       - name: Run suites
         if: env.XMOJ_ACCOUNT != ''
         shell: pwsh
-        env:
-          ELECTRON_RUN_AS_NODE: ''
         run: |
+          Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
           $ErrorActionPreference = 'Continue'
           $suites = @(
             'test:live',
@@ -130,15 +144,37 @@ jobs:
             'test:compare',
             'test:e2e'
           )
-          $failed = @()
+          $logDir = Join-Path $PWD 'test-logs'
+          New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+          $results = @()
           foreach ($suite in $suites) {
+            $safe = $suite -replace '[^A-Za-z0-9_.-]', '_'
+            $log = Join-Path $logDir "$safe.log"
+            $watch = [System.Diagnostics.Stopwatch]::StartNew()
             Write-Host "::group::$suite"
-            npm run $suite
-            if ($LASTEXITCODE -ne 0) { $failed += $suite }
+            npm run $suite *>&1 | Tee-Object -FilePath $log
+            $code = $LASTEXITCODE
+            $watch.Stop()
             Write-Host "::endgroup::"
+            $seconds = [math]::Round($watch.Elapsed.TotalSeconds, 1)
+            Write-Host "$suite -> exit=$code  ${seconds}s"
+            if ($code -ne 0) {
+              Write-Host "::error title=$suite failed::$suite exited with $code after ${seconds}s (see the test-logs artifact)"
+            }
+            $results += [pscustomobject]@{ Suite = $suite; Exit = $code; Seconds = $seconds }
           }
+
+          $results | Format-Table -AutoSize | Out-String | Write-Host
+          $summary = @('| Suite | Exit | Seconds |', '| --- | --- | --- |')
+          foreach ($r in $results) {
+            $icon = if ($r.Exit -eq 0) { 'pass' } else { 'FAIL' }
+            $summary += "| ``$($r.Suite)`` | $icon | $($r.Seconds) |"
+          }
+          $summary -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+          $failed = @($results | Where-Object { $_.Exit -ne 0 })
           if ($failed.Count -gt 0) {
-            Write-Error "Failed suites: $($failed -join ', ')"
+            Write-Host "::error title=Failed suites::$($failed.Suite -join ', ')"
             exit 1
           }
           Write-Host "All credentialed suites passed."
@@ -149,14 +185,15 @@ jobs:
         run: |
           Remove-Item -Path tests/account.txt -Force -ErrorAction SilentlyContinue
 
-      - name: Upload e2e logs
+      - name: Upload logs
         if: always() && env.XMOJ_ACCOUNT != ''
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-logs
+          name: credentialed-logs
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 14
           path: |
+            test-logs/
             tests/.electron-stdout.txt
             tests/.electron-stderr.txt
             tests/live-login-report.txt
