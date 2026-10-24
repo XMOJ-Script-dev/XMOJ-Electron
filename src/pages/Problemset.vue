@@ -85,7 +85,7 @@ const hasResults = computed(() => visible.value.length > 0);
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-6xl space-y-6 p-6">
+  <div class="mx-auto w-full max-w-6xl space-y-6 p-6" :aria-busy="loading">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">题库</h1>

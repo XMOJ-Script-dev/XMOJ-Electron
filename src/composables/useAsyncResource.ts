@@ -46,6 +46,7 @@ export function useCachedResource<T>(cached: () => Promise<T | null>, fresh: () 
     let token = 0;
     async function load(fetchCached: boolean): Promise<void> {
         const current = ++token;
+        loading.value = true;
         error.value = null;
         if (fetchCached) {
             try {
@@ -60,8 +61,6 @@ export function useCachedResource<T>(cached: () => Promise<T | null>, fresh: () 
             catch {
             }
         }
-        if (data.value === null)
-            loading.value = true;
         try {
             const value = await fresh();
             if (current !== token)

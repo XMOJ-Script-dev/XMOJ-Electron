@@ -155,7 +155,7 @@ function openSubmission(submission: SubmissionEntry): void {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-6xl space-y-6 p-6">
+  <div class="mx-auto w-full max-w-6xl space-y-6 p-6" :aria-busy="loading">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">状态</h1>

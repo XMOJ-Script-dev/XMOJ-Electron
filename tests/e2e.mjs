@@ -36,7 +36,7 @@ app.on('ready', async () => {
         await new Promise((resolve) => win.webContents.once('did-finish-load', resolve));
     }
     record(true, 'renderer finished loading');
-    const waitForApp = async (timeoutMs = 40000) => {
+    const waitForApp = async (timeoutMs = 120000) => {
         const deadline = Date.now() + timeoutMs;
         let last = null;
         while (Date.now() < deadline) {
@@ -48,12 +48,14 @@ app.on('ready', async () => {
           restoring: /正在恢复登录状态/.test(text),
           sidebarReady: document.querySelector('[data-slot="sidebar-menu-item"]') !== null,
           skeletons: document.querySelectorAll('[data-slot="skeleton"]').length,
+          busy: !!document.querySelector('[aria-busy="true"]'),
           homeLoaded: /服务器时间/.test(text) && /公告/.test(text),
         }
       })()`);
             const settled = last.heading &&
                 last.sidebarReady &&
                 !last.restoring &&
+                !last.busy &&
                 last.skeletons === 0 &&
                 last.homeLoaded;
             if (settled)
@@ -63,7 +65,7 @@ app.on('ready', async () => {
         return last;
     };
     const ready = await waitForApp();
-    record(Boolean(ready?.homeLoaded), 'app finished restoring and loading home data', ready?.heading ?? 'timed out');
+    record(Boolean(ready?.homeLoaded && !ready?.restoring && !ready?.busy && ready?.skeletons === 0), 'app finished restoring and loading home data', JSON.stringify(ready));
     const probe = await win.webContents.executeJavaScript(`(() => {
     const root = document.querySelector('#app')
     const text = document.body.textContent
@@ -84,7 +86,7 @@ app.on('ready', async () => {
     record(text.includes('服务器时间'), 'home rendered the live server clock');
     record(text.includes('公告'), 'home rendered the announcements section');
     const upcoming = await win.webContents.executeJavaScript(`(async () => {
-    const snapshot = await window.xmoj.home.snapshot()
+    const snapshot = await window.xmoj.home.snapshot(true)
     return snapshot.countdown.length
   })()`);
     if (upcoming > 0) {
@@ -267,7 +269,9 @@ app.on('ready', async () => {
         .find((b) => b.textContent.trim() === ${JSON.stringify(label)})
       if (target) target.click()
     })()`);
-        const deadline = Date.now() + 30000;
+        // The problemset aggregates every upstream page before rendering. A
+        // cold CI runner can take much longer than a single-page request.
+        const deadline = Date.now() + 120000;
         let heading = null;
         let settledAt = 0;
         while (Date.now() < deadline) {
@@ -275,11 +279,12 @@ app.on('ready', async () => {
         heading: document.querySelector('h1')?.textContent.trim() ?? null,
         rows: document.querySelectorAll('tbody tr').length,
         skeletons: document.querySelectorAll('[data-slot="skeleton"]').length,
+        busy: !!document.querySelector('[aria-busy="true"]'),
         text: document.body.textContent,
       }))()`);
             heading = state.heading;
             const switched = heading !== null && heading !== before;
-            const settled = state.skeletons === 0 && (state.rows > 0 || /没有|暂无|还没有/.test(state.text));
+            const settled = !state.busy && state.skeletons === 0 && (state.rows > 0 || /没有|暂无|还没有/.test(state.text));
             if (switched && settled) {
                 // A view with no table (讨论, 短消息) reports "empty" before its
                 // network read returns, so hold the result for a moment and prefer
@@ -294,9 +299,10 @@ app.on('ready', async () => {
             }
             await wait(400);
         }
+        record(false, `${label} finished loading within 120 seconds`, `heading=${heading}`);
         return {
             heading,
-            rows: 0,
+            rows: await win.webContents.executeJavaScript('document.querySelectorAll("tbody tr").length'),
             text: await win.webContents.executeJavaScript('document.body.textContent'),
         };
     };
@@ -330,14 +336,26 @@ app.on('ready', async () => {
         b.click()
         return true
       })()`);
-            if (clicked)
-                await wait(6000);
-            return clicked;
+            if (!clicked)
+                return false;
+            const deadline = Date.now() + 60000;
+            while (Date.now() < deadline) {
+                const settled = await win.webContents.executeJavaScript(`(() => {
+          const b = Array.from(document.querySelectorAll('button'))
+            .find((x) => x.textContent.trim() === ${JSON.stringify(label)})
+          return !!b && !b.disabled && !document.querySelector('[aria-busy="true"]')
+        })()`);
+                if (settled)
+                    return true;
+                await wait(400);
+            }
+            console.log(`  (timed out waiting for ${label} to finish loading)`);
+            return false;
         };
         const headAfter = () => win.webContents.executeJavaScript('document.querySelector("tbody tr td")?.textContent.trim() ?? null');
         record(await clickButton('下一页'), '状态 下一页 is enabled and clickable');
         const page2Head = await headAfter();
-        record(page2Head !== headId, '状态 下一页 advanced to older submissions', `${headId} -> ${page2Head}`);
+        record(page2Head !== null && Number(page2Head) < Number(headId), '状态 下一页 advanced to older submissions', `${headId} -> ${page2Head}`);
         record(await clickButton('上一页'), '状态 上一页 is enabled and clickable');
         record((await headAfter()) === headId, '状态 上一页 returned to the first page');
         const avatar = await win.webContents.executeJavaScript(`(async () => {

@@ -16,6 +16,7 @@
     "test:codecheck": "node --experimental-strip-types tests/codecheck.ts",
     "test:diff": "node --experimental-strip-types tests/diff.ts",
     "test:cache": "node --experimental-strip-types --loader ./tests/loader.mjs tests/cache.ts",
+    "test:async-resource": "node --experimental-strip-types tests/async-resource.ts",
     "test:native-views": "node --experimental-strip-types --loader ./tests/loader.mjs tests/native-views.ts",
     "test:cloud-settings": "node --experimental-strip-types --loader ./tests/loader.mjs tests/community-settings.ts",
     "test:markdown": "node --experimental-strip-types --loader ./tests/loader.mjs tests/markdown.ts",

@@ -156,7 +156,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release.outputs.tag }}
-          name: ${{ needs.release.outputs.tag }}
+          name: Release ${{ needs.release.outputs.tag }}
           prerelease: ${{ needs.release.outputs.prerelease == 'true' }}
           generate_release_notes: true
           fail_on_unmatched_files: true

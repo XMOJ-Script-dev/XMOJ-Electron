@@ -103,6 +103,7 @@ npm test              # 解析器校验：对真实页面快照 + 构造的 HUST
 npm run test:poller   # 轮询器行为（启动/自停/不重叠/异常不中断）
 npm run test:diff     # 逐行 diff（插入/删除/行号单调/空侧/大输入）
 npm run test:cache    # 页面缓存（命中标记、maxAge 失效、按键清除、版本失效）
+npm run test:async-resource # 缓存读取/后台刷新期间的加载状态与请求竞争
 npm run test:native-views # 题面卡片/样例包装清理/`/upload` 绝对化、排名表格、
                           # 个人主页 `p(id,count)` 解析（离线，合成 fixture）
 npm run test:cloud-settings # 云同步的**线格式**：`Settings` 必须是 JSON 字符串，
@@ -128,6 +129,10 @@ E2E 断言「没有 webview / 没有 `target="_blank"`」，也断言题面卡�
 > 提示：E2E 会读应用真实的 `userData`，所以**清掉 `page-cache.json`**
 > （`%APPDATA%\xmoj-electron\page-cache.json`）能得到最干净的一次运行；
 > 带缓存运行时断言同样成立，只是首屏会先渲染缓存再刷新，总耗时略长。
+
+E2E 对首页、题库、状态使用 `aria-busy` 等待实际加载完成（包括缓存后的后台刷新），
+而不是只看骨架屏是否消失或固定等待几秒。题库冷启动需要汇总全部分页，等待上限为
+120 秒；状态翻页等待上限为 60 秒。超时或内容不正确仍会失败，不会跳过断言。
 
 ## 许可
 

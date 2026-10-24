@@ -49,6 +49,7 @@ jobs:
             'test:codecheck',
             'test:diff',
             'test:cache',
+            'test:async-resource',
             'test:native-views',
             'test:cloud-settings',
             'test:markdown',
