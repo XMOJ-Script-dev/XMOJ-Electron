@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isViewSettled } from './lib/e2e-readiness.mjs';
 const require = createRequire(import.meta.url);
 const { app, BrowserWindow } = require('electron');
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -278,18 +279,19 @@ app.on('ready', async () => {
             const state = await win.webContents.executeJavaScript(`(() => ({
         heading: document.querySelector('h1')?.textContent.trim() ?? null,
         rows: document.querySelectorAll('tbody tr').length,
+        listItems: document.querySelectorAll('.divide-y > button').length,
         skeletons: document.querySelectorAll('[data-slot="skeleton"]').length,
         busy: !!document.querySelector('[aria-busy="true"]'),
         text: document.body.textContent,
       }))()`);
             heading = state.heading;
             const switched = heading !== null && heading !== before;
-            const settled = !state.busy && state.skeletons === 0 && (state.rows > 0 || /没有|暂无|还没有/.test(state.text));
+            const settled = isViewSettled(state);
             if (switched && settled) {
                 // A view with no table (讨论, 短消息) reports "empty" before its
                 // network read returns, so hold the result for a moment and prefer
                 // one that has rows.
-                if (state.rows > 0)
+                if (state.rows > 0 || state.listItems > 0)
                     return { heading, rows: state.rows, text: state.text };
                 if (!settledAt)
                     settledAt = Date.now();

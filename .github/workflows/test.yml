@@ -50,6 +50,7 @@ jobs:
             'test:diff',
             'test:cache',
             'test:async-resource',
+            'test:e2e-readiness',
             'test:native-views',
             'test:cloud-settings',
             'test:markdown',

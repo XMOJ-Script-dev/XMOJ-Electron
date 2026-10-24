@@ -43,6 +43,7 @@ function statusOf(contest: ContestSummary): {
 async function load(target = page.value): Promise<void> {
     const current = ++token;
     error.value = null;
+    loading.value = contests.value.length === 0;
     refreshing.value = true;
     try {
         const first = await fetchContestList(target, true);
@@ -133,7 +134,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-6xl space-y-6 p-6">
+  <div class="mx-auto w-full max-w-6xl space-y-6 p-6" :aria-busy="refreshing || detailLoading">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">竞赛&作业</h1>
