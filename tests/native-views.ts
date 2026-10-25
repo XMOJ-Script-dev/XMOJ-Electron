@@ -148,10 +148,14 @@ console.log('\n=== navigation targets ===');
     check('discussion target is consumed once', navigation.consumeDiscussionTarget() === null);
 }
 {
-    const missingSource = await fetchSource({
-        get: async () => ({ status: 200, body: 'not-cached' }),
-    } as never, 1);
-    check('not-cached source response is not shown as code', missingSource === null);
+    const sourceHttp = (body: string) => ({
+        get: async () => ({ status: 200, body }),
+    }) as never;
+    const sourceWithMarker = await fetchSource(sourceHttp('int main() {\n  return 0;\n}\nnot-cached'), 1);
+    check('trailing not-cached marker is removed without losing code',
+        sourceWithMarker === 'int main() {\n  return 0;\n}', JSON.stringify(sourceWithMarker));
+    const missingSource = await fetchSource(sourceHttp('not-cached'), 1);
+    check('marker-only source response remains unavailable', missingSource === null);
 }
 console.log(`\n${failures === 0 ? 'ALL NATIVE VIEW CHECKS PASSED' : `${failures} NATIVE VIEW CHECK(S) FAILED`}\n`);
 process.exit(failures === 0 ? 0 : 1);

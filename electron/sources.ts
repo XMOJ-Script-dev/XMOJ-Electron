@@ -21,9 +21,10 @@ export async function fetchSource(http: HttpClient, solutionId: number): Promise
     const text = response.body;
     if (/<html|<body|<!DOCTYPE/i.test(text))
         return null;
-    if (/^not-cached$/i.test(text.trim()))
+    const source = text.replace(/\r?\n[ \t]*not-cached[ \t]*\s*$/i, '');
+    if (/^not-cached$/i.test(source.trim()))
         return null;
-    return text;
+    return source;
 }
 export function extensionForLanguage(language: string): string {
     const value = language.toLowerCase();
