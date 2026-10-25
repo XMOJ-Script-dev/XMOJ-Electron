@@ -19,12 +19,31 @@ const emits = defineEmits<{
 }>();
 const isMobile = useMediaQuery("(max-width: 768px)");
 const openMobile = ref(false);
+const SIDEBAR_OPEN_KEY = "xmoj.sidebar.open.v1";
+function initialOpen(): boolean {
+    try {
+        const saved = localStorage.getItem(SIDEBAR_OPEN_KEY);
+        return saved === null ? props.defaultOpen : saved === "true";
+    }
+    catch {
+        return props.defaultOpen;
+    }
+}
 const open = useVModel(props, "open", emits, {
-    defaultValue: props.defaultOpen ?? false,
+    defaultValue: initialOpen(),
     passive: (props.open === undefined) as false,
 }) as Ref<boolean>;
-function setOpen(value: boolean, _persist = true) {
+const pinnedOpen = ref(initialOpen());
+function setOpen(value: boolean, persist = true) {
     open.value = value;
+    if (persist) {
+        pinnedOpen.value = value;
+        try {
+            localStorage.setItem(SIDEBAR_OPEN_KEY, String(value));
+        }
+        catch {
+        }
+    }
 }
 function setOpenMobile(value: boolean) {
     openMobile.value = value;
@@ -42,6 +61,7 @@ const state = computed(() => open.value ? "expanded" : "collapsed");
 provideSidebarContext({
     state,
     open,
+    pinnedOpen,
     setOpen,
     isMobile,
     openMobile,

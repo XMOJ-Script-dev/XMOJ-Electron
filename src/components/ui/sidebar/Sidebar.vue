@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
     variant: "sidebar",
     collapsible: "offcanvas",
 });
-const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar();
+const { isMobile, state, openMobile, pinnedOpen, setOpenMobile, setOpen } = useSidebar();
 let closeTimer: number | undefined;
 const pinned = ref(0);
 const pointerInside = ref(false);
@@ -45,7 +45,7 @@ function onMouseEnter(event?: MouseEvent): void {
 }
 function onMouseLeave(event?: MouseEvent): void {
     pointerInside.value = false;
-    if (pinned.value > 0)
+    if (pinned.value > 0 || pinnedOpen.value)
         return;
     if (isPointerOverSidebar(event ? { x: event.clientX, y: event.clientY } : undefined))
         return;
@@ -54,11 +54,11 @@ function onMouseLeave(event?: MouseEvent): void {
 function scheduleClose(delay = 160): void {
     cancelClose();
     closeTimer = window.setTimeout(() => {
-        if (pinned.value > 0)
+        if (pinned.value > 0 || pinnedOpen.value)
             return;
         if (isPointerOverSidebar(lastPointer) || pointerInside.value)
             return;
-        setOpen(false);
+        setOpen(false, false);
     }, delay);
 }
 function pin(): void {
@@ -81,13 +81,13 @@ function onDocumentPointerDown(event: PointerEvent): void {
     const closest = (target as HTMLElement).closest?.('[data-slot="dropdown-menu-content"], [data-slot="tooltip-content"]');
     if (closest)
         return;
-    if (pinned.value > 0 && pointerInside.value)
+    if (pinnedOpen.value || (pinned.value > 0 && pointerInside.value))
         return;
-    setOpen(false);
+    setOpen(false, false);
 }
 function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape')
-        setOpen(false);
+    if (event.key === 'Escape' && !pinnedOpen.value)
+        setOpen(false, false);
 }
 const panelRef = ref<HTMLElement | null>(null);
 let lastPointer: { x: number; y: number } | undefined;
@@ -120,6 +120,8 @@ onBeforeUnmount(() => {
     document.removeEventListener('mousemove', trackPointer, true);
 });
 onMounted(() => {
+    if (pinnedOpen.value)
+        setOpen(true, false);
     document.addEventListener('pointerdown', onDocumentPointerDown, true);
     document.addEventListener('keydown', onKeydown);
     document.addEventListener('mousemove', trackPointer, true);
@@ -191,7 +193,7 @@ onMounted(() => {
         'bg-sidebar text-sidebar-foreground border-sidebar-border',
         // Only the visible width animates; the panel's left edge and its inner
         // layout stay put, so nothing inside it jumps during the transition.
-        'transition-[width] duration-300 ease-in-out',
+        'transition-[width] duration-150 ease-out',
         side === 'left' ? 'left-0 border-r' : 'right-0 border-l',
         state === 'collapsed'
           ? 'w-(--sidebar-width-icon)'

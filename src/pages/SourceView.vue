@@ -21,7 +21,7 @@ async function load(): Promise<void> {
     try {
         source.value = await fetchSource(solutionId.value);
         if (source.value === null)
-            error.value = '无法读取该提交的代码（可能已被隐藏）';
+            error.value = '该提交的代码尚未缓存或已被隐藏，暂时无法查看';
     }
     catch (caught) {
         error.value = caught instanceof Error ? caught.message : String(caught);

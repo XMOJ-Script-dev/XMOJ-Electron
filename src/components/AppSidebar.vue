@@ -1,5 +1,5 @@
 <script setup lang="ts">import { computed, ref } from 'vue';
-import { BookText, CalendarDays, ChartNoAxesColumn, ChartPie, ChevronsUpDown, Download, FolderDown, House, Info, Loader2, LogIn, LogOut, Mail, MessagesSquare, RefreshCw, Settings, User, } from '@lucide/vue';
+import { BookText, CalendarDays, ChartNoAxesColumn, ChartPie, ChevronsUpDown, Download, FolderDown, House, Info, Loader2, LogIn, LogOut, Mail, MessagesSquare, Pin, RefreshCw, Settings, User, } from '@lucide/vue';
 import UserAvatar from '@/components/UserAvatar.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, } from '@/components/ui/sidebar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu';
@@ -7,10 +7,12 @@ import { useSession } from '@/stores/session';
 import { useNavigation, type ViewId } from '@/stores/navigation';
 import { usePanel } from '@/stores/panel';
 import { useToasts } from '@/stores/toasts';
+import { useSidebar } from '@/components/ui/sidebar/utils';
 import { checkAppUpdate, showAboutDialog, showUpdateDialog } from '@/services/update';
 const session = useSession();
 const navigation = useNavigation();
 const panel = usePanel();
+const sidebar = useSidebar();
 const mainItems = [
     { id: 'home' as ViewId, title: '首页', icon: House },
     { id: 'problemset' as ViewId, title: '题库', icon: BookText },
@@ -53,6 +55,9 @@ async function handleLogout(): Promise<void> {
 }
 function handleSignIn(): void {
     navigation.navigate('problemset');
+}
+function togglePinnedSidebar(): void {
+    sidebar.setOpen(!sidebar.pinnedOpen.value);
 }
 </script>
 
@@ -120,6 +125,13 @@ function handleSignIn(): void {
               <DropdownMenuLabel class="truncate">
                 {{ username || '未登录' }}
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem @select="togglePinnedSidebar">
+                <Pin />
+                {{ sidebar.pinnedOpen.value ? '取消侧栏常驻' : '侧栏常驻' }}
+              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
 
               <!-- The less-used views live here rather than in the main list. -->

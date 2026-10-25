@@ -36,7 +36,7 @@ function dismiss(notice: CommunityNotification): void {
 }
 function open(notice: CommunityNotification): void {
     if (notice.kind === 'bbs') {
-        navigation.navigate('discussion');
+        navigation.openDiscussion(notice.postId, notice.pageNumber);
     }
     else {
         navigation.navigate('mail');

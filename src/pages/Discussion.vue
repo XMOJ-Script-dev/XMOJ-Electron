@@ -9,8 +9,10 @@ import AnnouncementBody from '@/components/AnnouncementBody.vue';
 import UserChip from '@/components/UserChip.vue';
 import { createPost, createReply, fetchBoards, fetchPost, fetchPosts } from '@/services/api';
 import { useSession } from '@/stores/session';
+import { useNavigation } from '@/stores/navigation';
 import type { BbsBoard, BbsPost, BbsPostDetail } from '@/shared/community';
 const session = useSession();
+const navigation = useNavigation();
 const boards = ref<BbsBoard[]>([]);
 const selectedBoard = ref(-1);
 const posts = ref<BbsPost[]>([]);
@@ -212,7 +214,11 @@ function formatTime(value?: number): string {
 const replies = computed(() => thread.value?.Reply ?? []);
 onMounted(async () => {
     await loadBoards(true);
-    await loadPosts();
+    const target = navigation.consumeDiscussionTarget();
+    if (target)
+        await openThread(target.postId, target.page);
+    else
+        await loadPosts();
 });
 </script>
 

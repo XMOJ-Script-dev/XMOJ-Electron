@@ -21,6 +21,8 @@ export async function fetchSource(http: HttpClient, solutionId: number): Promise
     const text = response.body;
     if (/<html|<body|<!DOCTYPE/i.test(text))
         return null;
+    if (/^not-cached$/i.test(text.trim()))
+        return null;
     return text;
 }
 export function extensionForLanguage(language: string): string {

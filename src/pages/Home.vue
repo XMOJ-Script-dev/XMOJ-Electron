@@ -102,93 +102,88 @@ onBeforeUnmount(() => {
       <Skeleton v-for="index in 3" :key="index" class="h-28 w-full rounded-xl" />
     </div>
 
-    <div class="space-y-6">
-      <!-- Countdown, then the service notice, then the news list. -->
-      <div v-if="countdown.length > 0" class="space-y-3">
-        <h2 class="text-sm font-medium text-muted-foreground">倒计时</h2>
-        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <div
-            v-for="item in countdown"
-            :key="`${item.event}-${item.date}`"
-            class="flex items-baseline justify-between gap-3 rounded-lg border bg-card px-3 py-2"
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,1fr)]">
+      <div class="space-y-6">
+        <div v-if="announcements.length > 0" class="space-y-3">
+          <h2 class="text-sm font-medium text-muted-foreground">公告</h2>
+          <article
+            v-for="(item, index) in announcements"
+            :key="`${item.title}-${index}`"
+            class="rounded-xl border bg-card transition-shadow hover:shadow-sm"
           >
-            <span class="min-w-0 truncate text-sm" :title="item.event">{{ item.event }}</span>
-            <span class="shrink-0 text-sm text-muted-foreground">
-              距离还有
-              <span class="font-mono font-semibold text-foreground tabular-nums">
-                {{ item.days }}
-              </span>
-              天
-            </span>
+            <header class="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+              <h3 class="font-semibold">{{ item.title }}</h3>
+              <Badge v-if="item.date" variant="secondary" class="font-mono">
+                {{ item.date }}
+              </Badge>
+            </header>
+            <AnnouncementBody
+              class="px-4 py-3 text-sm leading-relaxed"
+              :source="item.html"
+            />
+          </article>
+        </div>
+
+        <div
+          v-else-if="!resource.loading.value && !resource.error.value"
+          class="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground"
+        >
+          暂无公告
+        </div>
+
+        <div v-if="banners.length > 0" class="space-y-3">
+          <h2 class="text-sm font-medium text-muted-foreground">推荐</h2>
+          <div class="grid items-start gap-4 sm:grid-cols-2">
+            <button
+              v-for="(banner, index) in banners"
+              :key="`${banner.src}-${index}`"
+              type="button"
+              data-slot="promo-banner"
+              class="group relative flex items-center justify-center overflow-hidden rounded-xl border bg-muted transition-shadow hover:shadow-sm"
+              :title="banner.href"
+              @click="openBanner(banner.href)"
+            >
+              <img
+                :src="banner.src"
+                class="block h-auto w-full object-contain"
+                alt=""
+                decoding="async"
+                referrerpolicy="no-referrer"
+              />
+              <ExternalLink
+                class="absolute top-2 right-2 size-4 text-foreground opacity-0 drop-shadow transition-opacity group-hover:opacity-100"
+              />
+            </button>
           </div>
         </div>
       </div>
 
-      <div v-if="notice" class="space-y-3">
-        <h2 class="text-sm font-medium text-muted-foreground">服务公告</h2>
-        <article class="rounded-xl border bg-card">
-          <AnnouncementBody class="px-4 py-3 text-sm leading-relaxed" :source="notice" />
-        </article>
-      </div>
+      <div class="space-y-6">
+        <div v-if="countdown.length > 0" class="space-y-3">
+          <h2 class="text-sm font-medium text-muted-foreground">倒计时</h2>
+          <div class="grid gap-2">
+            <div
+              v-for="item in countdown"
+              :key="`${item.event}-${item.date}`"
+              class="flex items-baseline justify-between gap-3 rounded-lg border bg-card px-3 py-2"
+            >
+              <span class="min-w-0 truncate text-sm" :title="item.event">{{ item.event }}</span>
+              <span class="shrink-0 text-sm text-muted-foreground">
+                距离还有
+                <span class="font-mono font-semibold text-foreground tabular-nums">
+                  {{ item.days }}
+                </span>
+                天
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <div v-if="announcements.length > 0" class="space-y-3">
-        <h2 class="text-sm font-medium text-muted-foreground">公告</h2>
-        <article
-          v-for="(item, index) in announcements"
-          :key="`${item.title}-${index}`"
-          class="rounded-xl border bg-card transition-shadow hover:shadow-sm"
-        >
-          <header class="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-            <h3 class="font-semibold">{{ item.title }}</h3>
-            <Badge v-if="item.date" variant="secondary" class="font-mono">
-              {{ item.date }}
-            </Badge>
-          </header>
-          <AnnouncementBody
-            class="px-4 py-3 text-sm leading-relaxed"
-            :source="item.html"
-          />
-        </article>
-      </div>
-
-      <div
-        v-else-if="!resource.loading.value && !resource.error.value"
-        class="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground"
-      >
-        暂无公告
-      </div>
-
-      <div v-if="banners.length > 0" class="space-y-3">
-        <h2 class="text-sm font-medium text-muted-foreground">推荐</h2>
-        <!--
-          `items-start` matters: the default `stretch` would force both cards to
-          the taller one's height, so a tall banner would letterbox the other.
-        -->
-        <div class="grid items-start gap-4 sm:grid-cols-2">
-          <button
-            v-for="(banner, index) in banners"
-            :key="`${banner.src}-${index}`"
-            type="button"
-            data-slot="promo-banner"
-            class="group relative flex items-center justify-center overflow-hidden rounded-xl border bg-muted transition-shadow hover:shadow-sm"
-            :title="banner.href"
-            @click="openBanner(banner.href)"
-          >
-            <!--
-              The card follows the image's own aspect ratio: a fixed height either
-              crops wide banners or letterboxes tall ones.
-            -->
-            <img
-              :src="banner.src"
-              class="block h-auto w-full object-contain"
-              alt=""
-              decoding="async"
-              referrerpolicy="no-referrer"
-            />
-            <ExternalLink
-              class="absolute top-2 right-2 size-4 text-foreground opacity-0 drop-shadow transition-opacity group-hover:opacity-100"
-            />
-          </button>
+        <div v-if="notice" class="space-y-3">
+          <h2 class="text-sm font-medium text-muted-foreground">服务公告</h2>
+          <article class="rounded-xl border bg-card">
+            <AnnouncementBody class="px-4 py-3 text-sm leading-relaxed" :source="notice" />
+          </article>
         </div>
       </div>
     </div>

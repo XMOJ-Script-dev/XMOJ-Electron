@@ -23,9 +23,23 @@ export const VIEWS: ViewMeta[] = [
 ];
 const currentView = ref<ViewId>('home');
 const activeProblemId = ref(0);
+const discussionTarget = ref<{ postId: number; page: number } | null>(null);
 export function useNavigation() {
     function navigate(id: ViewId): void {
         currentView.value = id;
+    }
+    function openDiscussion(postId?: number, page = 1): void {
+        const targetId = typeof postId === 'number' && Number.isSafeInteger(postId) && postId > 0
+            ? postId
+            : null;
+        const validPage = Number.isSafeInteger(page) && page > 0 ? page : 1;
+        discussionTarget.value = targetId === null ? null : { postId: targetId, page: validPage };
+        currentView.value = 'discussion';
+    }
+    function consumeDiscussionTarget(): { postId: number; page: number } | null {
+        const target = discussionTarget.value;
+        discussionTarget.value = null;
+        return target;
     }
     function submitProblem(problemId: number): void {
         activeProblemId.value = problemId;
@@ -39,6 +53,8 @@ export function useNavigation() {
         currentView,
         activeProblemId,
         navigate,
+        openDiscussion,
+        consumeDiscussionTarget,
         submitProblem,
         viewProblem,
         views: VIEWS,

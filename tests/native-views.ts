@@ -3,6 +3,8 @@ import { parseSolvedProblems, parseUserProfile } from '../electron/profile.ts';
 import { parseContestRank } from '../electron/rank.ts';
 import { normalizeAssetUrls, sanitizeHtml } from '../electron/parsers.ts';
 import { parse as parseHtml } from 'node-html-parser';
+import { fetchSource } from '../electron/sources.ts';
+import { useNavigation } from '../src/stores/navigation.ts';
 let failures = 0;
 function check(label: string, condition: boolean, detail = '') {
     if (!condition)
@@ -113,6 +115,43 @@ console.log('\n=== user profile script emitter ===');
     check('solved total parsed', profile.solvedTotal === 257, String(profile.solvedTotal));
     check('profile url built', profile.profileUrl.includes('user=liushangchen'), profile.profileUrl);
     check('page without the emitter yields none', parseSolvedProblems('<p>hi</p>').length === 0);
+
+    const profileWithStats = parseUserProfile(`<div class="container">
+      <h2>alice--Alice</h2>
+      <table id="statics">
+        <tr><td>解决</td><td><a href="status.php?jresult=4">2</a></td></tr>
+        <tr><td>提交</td><td><a href="status.php?user_id=alice">10</a></td></tr>
+        <tr><td>正确</td><td><a href="status.php?jresult=4">8</a></td></tr>
+        <tr><td>答案错误</td><td><a href="status.php?jresult=6">2</a></td></tr>
+      </table>
+      <script>
+        var d1 = [], d2 = [];
+        d1.push([1704067200000, 4]);
+        d2.push([1704067200000, 2]);
+        $.plot($("#submission"), [{label:"提交",data:d1}, {label:"正确",data:d2}]);
+        function p(id,c) {}
+        p(1000,3);p(1010,1);
+      </script>
+    </div>`, 'alice');
+    check('rating calculated from profile data', profileWithStats.rating > 0, String(profileWithStats.rating));
+    check('submission and accepted totals parsed', profileWithStats.submissionTotal === 10 && profileWithStats.acceptedTotal === 8);
+    check('judgement distribution excludes solved row', profileWithStats.resultStats.length === 2, JSON.stringify(profileWithStats.resultStats));
+    check('daily activity chart data parsed', profileWithStats.activity.length === 1 &&
+        profileWithStats.activity[0].submissions === 4 && profileWithStats.activity[0].accepted === 2);
+}
+console.log('\n=== navigation targets ===');
+{
+    const navigation = useNavigation();
+    navigation.openDiscussion(42, 3);
+    const target = navigation.consumeDiscussionTarget();
+    check('discussion notification carries post and page', target?.postId === 42 && target.page === 3);
+    check('discussion target is consumed once', navigation.consumeDiscussionTarget() === null);
+}
+{
+    const missingSource = await fetchSource({
+        get: async () => ({ status: 200, body: 'not-cached' }),
+    } as never, 1);
+    check('not-cached source response is not shown as code', missingSource === null);
 }
 console.log(`\n${failures === 0 ? 'ALL NATIVE VIEW CHECKS PASSED' : `${failures} NATIVE VIEW CHECK(S) FAILED`}\n`);
 process.exit(failures === 0 ? 0 : 1);

@@ -204,6 +204,18 @@ export interface UserProfile {
     username: string;
     nick: string;
     solvedTotal: number;
+    submissionTotal: number;
+    acceptedTotal: number;
+    rating: number;
+    resultStats: {
+        label: string;
+        count: number;
+    }[];
+    activity: {
+        timestamp: number;
+        submissions: number;
+        accepted: number;
+    }[];
     problems: SolvedProblem[];
     profileUrl: string;
 }
