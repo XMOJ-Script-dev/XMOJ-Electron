@@ -1,6 +1,7 @@
 <script setup lang="ts">import type { SidebarProps } from ".";
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { useIntervalFn } from "@vueuse/core";
+import { useIntervalFn, useStorage } from "@vueuse/core";
+import { Pin, PinOff } from '@lucide/vue';
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import SheetDescription from '@/components/ui/sheet/SheetDescription.vue';
@@ -18,6 +19,11 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar();
 let closeTimer: number | undefined;
 const pinned = ref(0);
+const persistent = useStorage('xmoj-sidebar-pinned', false);
+function togglePersistent(): void {
+    persistent.value = !persistent.value;
+    setOpen(true, false);
+}
 const pointerInside = ref(false);
 function cancelClose(): void {
     if (closeTimer) {
@@ -32,7 +38,7 @@ function isPointerOverSidebar(point?: { x: number; y: number }): boolean {
         if (!node)
             return false;
         const rect = node.getBoundingClientRect();
-        return (point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom);
+        return (point.x >= rect.left && point.x < rect.right && point.y >= rect.top && point.y < rect.bottom);
     };
     const rail = document.querySelector('[data-slot="sidebar-hover-rail"]') as HTMLElement | null;
     return inside(panelRef.value) || inside(rail);
@@ -45,17 +51,18 @@ function onMouseEnter(event?: MouseEvent): void {
 }
 function onMouseLeave(event?: MouseEvent): void {
     pointerInside.value = false;
-    if (pinned.value > 0)
+    if (event) lastPointer = { x: event.clientX, y: event.clientY };
+    if (persistent.value || pinned.value > 0)
         return;
-    if (isPointerOverSidebar(event ? { x: event.clientX, y: event.clientY } : undefined))
-        return;
-    scheduleClose(250);
+    scheduleClose(70);
 }
 function scheduleClose(delay = 160): void {
     cancelClose();
     closeTimer = window.setTimeout(() => {
-        if (pinned.value > 0)
+        closeTimer = undefined;
+        if (persistent.value || pinned.value > 0)
             return;
+        if (document.querySelector('[data-slot="dropdown-menu-content"][data-state="open"]')) return;
         if (isPointerOverSidebar(lastPointer) || pointerInside.value)
             return;
         setOpen(false);
@@ -72,6 +79,7 @@ function unpin(): void {
         scheduleClose();
 }
 function onDocumentPointerDown(event: PointerEvent): void {
+    if (persistent.value) return;
     const target = event.target as Node | null;
     if (!target)
         return;
@@ -86,13 +94,17 @@ function onDocumentPointerDown(event: PointerEvent): void {
     setOpen(false);
 }
 function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape')
+    if (event.key === 'Escape' && !persistent.value)
         setOpen(false);
 }
 const panelRef = ref<HTMLElement | null>(null);
 let lastPointer: { x: number; y: number } | undefined;
 function trackPointer(event: MouseEvent): void {
     lastPointer = { x: event.clientX, y: event.clientY };
+    const inside = isPointerOverSidebar(lastPointer);
+    pointerInside.value = inside;
+    if (inside) cancelClose();
+    else if (state.value === 'expanded' && !persistent.value && pinned.value === 0 && closeTimer === undefined) scheduleClose(70);
 }
 let popoverPinned = false;
 const { pause } = useIntervalFn(() => {
@@ -107,9 +119,6 @@ const { pause } = useIntervalFn(() => {
             popoverPinned = false;
             unpin();
         }
-        else if (pinned.value === 0) {
-            scheduleClose();
-        }
     }
 }, 150, { immediateCallback: true });
 onBeforeUnmount(() => {
@@ -120,6 +129,7 @@ onBeforeUnmount(() => {
     document.removeEventListener('mousemove', trackPointer, true);
 });
 onMounted(() => {
+    if (persistent.value) setOpen(true, false);
     document.addEventListener('pointerdown', onDocumentPointerDown, true);
     document.addEventListener('keydown', onKeydown);
     document.addEventListener('mousemove', trackPointer, true);
@@ -166,13 +176,7 @@ onMounted(() => {
     :data-variant="variant"
     :data-side="side"
   >
-    <!--
-      The panel is physically fixed: constant 256px width, pinned to the same
-      edge. Only the *visible* slice of it changes, via the clip below, and the
-      inner content is always laid out at full width. Nothing about the panel
-      itself ever moves or resizes.
-    -->
-    <div class="relative w-(--sidebar-width-icon) shrink-0 bg-transparent" />
+    <div :class="persistent ? 'relative w-(--sidebar-width) shrink-0' : 'relative w-(--sidebar-width-icon) shrink-0'" />
     <div
       :class="
         cn(
@@ -183,15 +187,14 @@ onMounted(() => {
       "
       data-slot="sidebar-hover-rail"
       @mouseenter="onMouseEnter"
+      @mouseleave="onMouseLeave"
       @click="onMouseEnter"
     />
     <div
       :class="cn(
         'fixed inset-y-0 z-20 hidden overflow-hidden md:block',
         'bg-sidebar text-sidebar-foreground border-sidebar-border',
-        // Only the visible width animates; the panel's left edge and its inner
-        // layout stay put, so nothing inside it jumps during the transition.
-        'transition-[width] duration-300 ease-in-out',
+        'transition-[width] duration-100 ease-out',
         side === 'left' ? 'left-0 border-r' : 'right-0 border-l',
         state === 'collapsed'
           ? 'w-(--sidebar-width-icon)'
@@ -209,6 +212,9 @@ onMounted(() => {
         class="flex h-full flex-col group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
         :style="{ width: 'var(--sidebar-width)' }"
       >
+        <button v-if="state === 'expanded'" class="absolute right-2 top-2 z-10 rounded-md bg-sidebar p-1.5 hover:bg-sidebar-accent" :title="persistent ? '取消常驻' : '常驻侧栏'" :aria-pressed="persistent" @click="togglePersistent">
+          <PinOff v-if="persistent" class="size-4" /><Pin v-else class="size-4" />
+        </button>
         <slot />
       </div>
     </div>

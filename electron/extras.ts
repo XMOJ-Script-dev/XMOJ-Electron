@@ -1,8 +1,9 @@
 import { parse } from 'node-html-parser';
+import { SOFTWARE } from '../src/shared/software.ts';
 import { XMOJ_ORIGIN, type MonthlyBoard, type MonthlyCard, type SoftwareEntry } from '../src/shared/types.ts';
 import type { HttpClient } from './http.ts';
-import { absoluteUrl, normaliseText, sanitizeHtml } from './parsers.ts';
-export function parseMonthlyBoard(html: string): MonthlyBoard {
+import { absoluteUrl, normaliseText, sanitizeHtml, parseCountdown } from './parsers.ts';
+export function parseMonthlyBoard(html: string, serverTime = Date.now()): MonthlyBoard {
     const root = parse(html);
     const cards: MonthlyCard[] = [];
     const headers = root.querySelectorAll('h4.ui.block.top.attached.header');
@@ -42,11 +43,11 @@ export function parseMonthlyBoard(html: string): MonthlyBoard {
             }
         }
     }
-    return { intro, cards, url: `${XMOJ_ORIGIN}/open_contest.php` };
+    return { intro, cards, url: `${XMOJ_ORIGIN}/open_contest.php`, countdown: parseCountdown(html, new Date(serverTime)), serverTime };
 }
 export async function fetchMonthlyBoard(http: HttpClient): Promise<MonthlyBoard> {
     const response = await http.get(`${XMOJ_ORIGIN}/open_contest.php`);
-    return parseMonthlyBoard(response.body);
+    return parseMonthlyBoard(response.body, response.serverTime);
 }
 export function parseSoftwareList(html: string): SoftwareEntry[] {
     const root = parse(html);
@@ -71,7 +72,6 @@ export function parseSoftwareList(html: string): SoftwareEntry[] {
     }
     return entries;
 }
-export async function fetchSoftwareList(http: HttpClient): Promise<SoftwareEntry[]> {
-    const response = await http.get(`${XMOJ_ORIGIN}/downloads.php`);
-    return parseSoftwareList(response.body);
+export async function fetchSoftwareList(_http: HttpClient): Promise<SoftwareEntry[]> {
+    return SOFTWARE;
 }

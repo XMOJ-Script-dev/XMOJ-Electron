@@ -1,6 +1,7 @@
 <script setup lang="ts">import { computed, ref } from 'vue';
 import { BookText, CalendarDays, ChartNoAxesColumn, ChartPie, ChevronsUpDown, Download, FolderDown, House, Info, Loader2, LogIn, LogOut, Mail, MessagesSquare, RefreshCw, Settings, User, } from '@lucide/vue';
 import UserAvatar from '@/components/UserAvatar.vue';
+import UserChip from '@/components/UserChip.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, } from '@/components/ui/sidebar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu';
 import { useSession } from '@/stores/session';
@@ -107,7 +108,8 @@ function handleSignIn(): void {
                 <div
                   class="grid min-w-0 flex-1 text-left text-sm group-data-[collapsible=icon]:hidden"
                 >
-                  <span class="truncate">{{ username || '未登录' }}</span>
+                  <UserChip v-if="username" :username="username" :avatar="false" :link="false" />
+                  <span v-else class="truncate">未登录</span>
                   <span class="truncate text-xs text-muted-foreground">
                     {{ isAuthenticated ? (isAdmin ? '管理员' : '已登录') : '请登录' }}
                   </span>
@@ -122,7 +124,6 @@ function handleSignIn(): void {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
 
-              <!-- The less-used views live here rather than in the main list. -->
               <DropdownMenuItem
                 v-for="item in footerItems"
                 :key="item.id"

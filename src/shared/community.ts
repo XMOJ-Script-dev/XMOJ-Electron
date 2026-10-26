@@ -44,6 +44,7 @@ export interface BbsReply {
     EditPerson?: string;
 }
 export interface BbsPostDetail {
+    RootReplyID?: number;
     PostID?: number;
     Title: string;
     UserID?: string;

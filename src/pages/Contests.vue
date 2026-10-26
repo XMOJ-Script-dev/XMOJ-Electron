@@ -1,6 +1,7 @@
 <script setup lang="ts">import { computed, onMounted, ref } from 'vue';
 import { useErrorToast } from '@/composables/useErrorToast';
-import { ChevronLeft, ChevronRight, RefreshCw, Trophy } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, RefreshCw, Trophy, Play } from '@lucide/vue';
+import ContestReplay from '@/components/ContestReplay.vue';
 import { Button } from '@/components/ui/button';
 import UserChip from '@/components/UserChip.vue';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,8 @@ const error = ref<string | null>(null);
 useErrorToast(error);
 const detail = ref<ContestDetail | null>(null);
 const detailLoading = ref(false);
+const replayOpen = ref(false);
+const replayAvailable = computed(() => detail.value?.contest.replay === true || detail.value?.contest.replay === 'Y');
 let token = 0;
 function statusOf(contest: ContestSummary): {
     label: string;
@@ -98,6 +101,7 @@ async function openContest(contest: ContestSummary): Promise<void> {
     }
 }
 function closeContest(): void {
+    replayOpen.value = false;
     detail.value = null;
 }
 function openProblem(problemId: number | null): void {
@@ -158,7 +162,16 @@ onMounted(() => {
         >
           <RefreshCw :class="refreshing ? 'animate-spin' : ''" />
         </Button>
-        <!-- Both ranking boards live natively, reachable from the contest. -->
+        <Button
+          v-if="detail && replayAvailable"
+          variant="outline"
+          size="sm"
+          :disabled="detailLoading"
+          @click="panel.close(); replayOpen = true"
+        >
+          <Play />
+          回放
+        </Button>
         <Button
           v-if="detail"
           variant="outline"
@@ -180,7 +193,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Contest catalogue -->
     <template v-if="!detail">
       <div v-if="loading && contests.length === 0" class="space-y-2">
         <Skeleton v-for="index in 6" :key="index" class="h-16 w-full rounded-lg" />
@@ -254,7 +266,6 @@ onMounted(() => {
       </div>
     </template>
 
-    <!-- One contest -->
     <template v-else>
       <div class="flex flex-wrap items-center gap-2 text-sm">
         <Badge v-if="detailStatus" :variant="detailStatus.tone === 'running' ? 'default' : 'secondary'">
@@ -301,5 +312,6 @@ onMounted(() => {
         创建者 <UserChip :username="detail.contest.creator" :size="20" />
       </p>
     </template>
+    <ContestReplay v-if="replayOpen && detail" :contest-id="detail.contest.contestId" :title="detail.contest.title" @close="replayOpen = false" />
   </div>
 </template>

@@ -102,8 +102,6 @@ app.on('ready', async () => {
     const sidebarMeasure = () => win.webContents.executeJavaScript(`(() => {
       const sidebar = document.querySelector('[data-slot="sidebar"]')
       const spacer = sidebar ? sidebar.firstElementChild : null
-      // The desktop panel is the only fixed-positioned child; a hover rail and
-      // the spacer also live inside [data-slot="sidebar"].
       const panels = sidebar
         ? Array.from(sidebar.children).filter((el) => getComputedStyle(el).position === 'fixed')
         : []
@@ -270,8 +268,6 @@ app.on('ready', async () => {
         .find((b) => b.textContent.trim() === ${JSON.stringify(label)})
       if (target) target.click()
     })()`);
-        // The problemset aggregates every upstream page before rendering. A
-        // cold CI runner can take much longer than a single-page request.
         const deadline = Date.now() + 120000;
         let heading = null;
         let settledAt = 0;
@@ -288,9 +284,6 @@ app.on('ready', async () => {
             const switched = heading !== null && heading !== before;
             const settled = isViewSettled(state);
             if (switched && settled) {
-                // A view with no table (讨论, 短消息) reports "empty" before its
-                // network read returns, so hold the result for a moment and prefer
-                // one that has rows.
                 if (state.rows > 0 || state.listItems > 0)
                     return { heading, rows: state.rows, text: state.text };
                 if (!settledAt)
@@ -394,9 +387,6 @@ app.on('ready', async () => {
   })()`);
     await wait(2200);
     const home = await win.webContents.executeJavaScript(`(() => {
-    // Scope to the promo banners, not every image on the page: announcement
-    // bodies also contain images, which the markdown pipeline handles. Banners
-    // are buttons, not links, so that clicking one stays inside the app.
     const banners = Array.from(document.querySelectorAll('[data-slot="promo-banner"]'))
       .map((banner) => {
         const img = banner.querySelector('img')
@@ -421,8 +411,6 @@ app.on('ready', async () => {
         document.querySelector('[data-slot="sidebar"]')?.firstElementChild
           ?.getBoundingClientRect().width ?? -1,
       ),
-      // The desktop panel is the fixed-positioned child; its visible width is
-      // what must stay at rail width so the icons are not clipped away.
       collapsedPanelWidth: Math.round(
         Array.from(document.querySelector('[data-slot="sidebar"]')?.children ?? [])
           .filter((el) => getComputedStyle(el).position === 'fixed')
@@ -477,8 +465,6 @@ app.on('ready', async () => {
     const mailText = await win.webContents.executeJavaScript('document.body.textContent');
     record(/新建会话|还没有会话/.test(mailText) && !/加载失败/.test(mailText), '短消息 rendered its list/empty state without error');
     console.log('\n  --- problem cards ---');
-    // The sidebar no longer has a 题目 entry, so a problem is opened the way a
-    // user does: from the first row of the 题库 table.
     await clickSidebar('题库');
     await wait(2500);
     const openedFromList = await win.webContents.executeJavaScript(`(() => {
@@ -536,9 +522,7 @@ app.on('ready', async () => {
     record(!cardState.escaped, 'statement entities are decoded, not shown as &lt;');
     console.log('\n  --- native navigation ---');
     const shellState = await win.webContents.executeJavaScript(`(() => ({
-    // No webview: the removed "站内浏览" view must not come back.
     webviews: document.querySelectorAll('webview').length,
-    // Every link that used to target a browser tab is gone.
     blankTargets: document.querySelectorAll('a[target="_blank"]').length,
     sidebarEntries: Array.from(document.querySelectorAll('[data-slot="sidebar"] button'))
       .map((b) => b.textContent.trim())

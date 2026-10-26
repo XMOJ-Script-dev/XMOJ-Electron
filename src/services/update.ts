@@ -1,4 +1,5 @@
 import { XMOJ_ORIGIN, XMOJ_SCRIPT_ORIGIN } from '@/shared/types';
+import { showDialog } from '@/stores/dialog';
 export type UpdateStatus = 'available' | 'current' | 'unknown';
 export interface UpdateEntry {
     version: string;
@@ -117,7 +118,7 @@ export async function showAboutDialog(): Promise<void> {
     const links = projectLinks()
         .map((link) => `${link.label}：${link.url}`)
         .join('\n');
-    await window.xmoj.app.dialog({
+    await showDialog({
         title: '关于 XMOJ Electron',
         message: `XMOJ Electron ${version}`,
         detail: [
@@ -138,7 +139,7 @@ export async function showUpdateDialog(result: UpdateCheckResult): Promise<void>
     const lines: string[] = [];
     lines.push(`版本：${result.current}`, '');
     lines.push(`还没有版本更新功能哦`, '');
-    await window.xmoj.app.dialog({
+    await showDialog({
         title: '检查更新',
         message: result.status === 'unknown' ? '检查更新失败' : '版本信息',
         detail: lines.join('\n').trim(),

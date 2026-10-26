@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchStatus } from '@/services/api';
+import UserChip from '@/components/UserChip.vue';
 import { createPoller } from '@/lib/poller';
 import { formatDateTime, formatMemory, formatTime } from '@/lib/format';
 import { useNavigation } from '@/stores/navigation';
@@ -150,12 +151,12 @@ function verdictStyle(verdict: SubmissionVerdict): string {
     return verdictStyles[verdict] ?? verdictStyles.other;
 }
 function openSubmission(submission: SubmissionEntry): void {
-    panel.openSource(submission.id, `提交 #${submission.id} · ${submission.problemTitle || ''}`);
+    panel.openSource(submission.id, `提交 #${submission.id} · ${submission.problemTitle || ''}`, submission.language);
 }
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-6xl space-y-6 p-6" :aria-busy="loading">
+  <div class="mx-auto min-w-0 w-full max-w-6xl space-y-4 p-4 lg:space-y-6 lg:p-6" data-slot="status-page" :aria-busy="loading">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">状态</h1>
@@ -178,36 +179,26 @@ function openSubmission(submission: SubmissionEntry): void {
     </div>
 
     <form
-      class="grid gap-2 rounded-xl border p-3 sm:grid-cols-[1fr_auto_auto_auto_auto]"
+      class="grid min-w-0 grid-cols-2 gap-2 rounded-xl border p-3 md:grid-cols-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,0.8fr)_auto]"
+      data-slot="status-filters"
       @submit.prevent="applyFilters"
     >
-      <div class="relative">
+      <div class="relative min-w-0">
         <Search
           class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
         />
-        <Input v-model="draftUser" class="pl-9" placeholder="用户名" :disabled="loading" />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          class="absolute top-1/2 right-1 -translate-y-1/2"
-          title="对比两次提交的代码"
-          @click="navigation.navigate('compare')"
-        >
-          <GitCompare />
-          对比
-        </Button>
+        <Input
+          v-model="draftProblemId"
+          class="pl-9"
+          placeholder="题目编号"
+          inputmode="numeric"
+          :disabled="loading"
+        />
       </div>
-      <Input
-        v-model="draftProblemId"
-        class="sm:w-32"
-        placeholder="题目编号"
-        inputmode="numeric"
-        :disabled="loading"
-      />
+      <Input v-model="draftUser" placeholder="用户名" aria-label="按用户名筛选" :disabled="loading" />
       <select
         v-model="draftResult"
-        class="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+        class="h-9 min-w-0 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
         :disabled="loading"
       >
         <option v-for="option in RESULT_OPTIONS" :key="option.value" :value="option.value">
@@ -216,7 +207,7 @@ function openSubmission(submission: SubmissionEntry): void {
       </select>
       <select
         v-model="language"
-        class="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+        class="h-9 min-w-0 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
         :disabled="loading"
       >
         <option value="">全部语言</option>
@@ -242,8 +233,8 @@ function openSubmission(submission: SubmissionEntry): void {
       <Skeleton v-for="index in 8" :key="index" class="h-11 w-full rounded-lg" />
     </div>
 
-    <div v-else-if="submissions.length > 0" class="overflow-x-auto rounded-xl border">
-      <table class="w-full text-sm">
+    <div v-else-if="submissions.length > 0" class="min-w-0 max-w-full overflow-x-auto rounded-xl border" data-slot="status-table-scroll" role="region" aria-label="评测记录，可左右滚动查看完整列" tabindex="0">
+      <table class="w-full min-w-[960px] whitespace-nowrap text-sm">
         <thead class="bg-muted/50 text-muted-foreground">
           <tr>
             <th class="w-20 px-3 py-2 text-right font-medium">编号</th>
@@ -264,9 +255,9 @@ function openSubmission(submission: SubmissionEntry): void {
             @click="openSubmission(submission)"
           >
             <td class="px-3 py-2 text-right font-mono tabular-nums">{{ submission.id }}</td>
-            <td class="max-w-32 truncate px-3 py-2">{{ submission.user || '—' }}</td>
+            <td class="whitespace-nowrap px-3 py-2"><UserChip v-if="submission.user" :username="submission.user" :size="20" /><span v-else>—</span></td>
             <td class="max-w-64 px-3 py-2">
-              <span class="truncate" :title="submission.problemTitle">
+              <span class="block max-w-64 truncate" :title="submission.problemTitle">
                 {{ submission.problemTitle || '—' }}
               </span>
             </td>

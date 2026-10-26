@@ -23,6 +23,7 @@ export const VIEWS: ViewMeta[] = [
 ];
 const currentView = ref<ViewId>('home');
 const activeProblemId = ref(0);
+const activeThread = ref<{ postId: number; page: number } | null>(null);
 export function useNavigation() {
     function navigate(id: ViewId): void {
         currentView.value = id;
@@ -38,6 +39,11 @@ export function useNavigation() {
     return {
         currentView,
         activeProblemId,
+        activeThread,
+        viewThread(postId: number, page = 1) {
+            activeThread.value = { postId, page };
+            currentView.value = 'discussion';
+        },
         navigate,
         submitProblem,
         viewProblem,

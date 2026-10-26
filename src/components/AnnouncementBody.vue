@@ -1,10 +1,16 @@
 <script setup lang="ts">import { computed } from 'vue';
 import { renderAnnouncement } from '@/lib/markdown';
+import { htmlToMarkdown } from '@/lib/markdown-copy';
 import 'katex/dist/katex.min.css';
 const props = defineProps<{
     source?: string | null;
+    format?: 'auto' | 'markdown' | 'statement';
 }>();
-const rendered = computed(() => renderAnnouncement(props.source ?? ''));
+const rendered = computed(() => {
+    const source = props.source ?? '';
+    if (props.format === 'statement') return renderAnnouncement(htmlToMarkdown(source), 'markdown');
+    return renderAnnouncement(source, props.format === 'markdown' ? 'markdown' : 'auto');
+});
 </script>
 
 <template>
@@ -50,7 +56,9 @@ const rendered = computed(() => renderAnnouncement(props.source ?? ''));
 .announcement-body h1,
 .announcement-body h2,
 .announcement-body h3,
-.announcement-body h4 {
+.announcement-body h4,
+.announcement-body h5,
+.announcement-body h6 {
   font-weight: 600;
   margin: 0.75rem 0 0.25rem;
 }
@@ -78,5 +86,35 @@ const rendered = computed(() => renderAnnouncement(props.source ?? ''));
 .announcement-body td {
   border: 1px solid var(--border);
   padding: 0.25rem 0.5rem;
+}
+
+.announcement-body blockquote {
+  margin: 0.75rem 0;
+  border-left: 3px solid var(--border);
+  padding: 0.1rem 0 0.1rem 1rem;
+  color: var(--muted-foreground);
+}
+.announcement-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+.announcement-body pre code { padding: 0; background: none; }
+.announcement-body th, .announcement-body td { vertical-align: top; }
+.service-notice {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.service-notice :is(h1,h2,h3,h4,h5,h6) { font-size: 1em; line-height: 1.35; }
+.service-notice .badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  background: #40885b;
+  color: white;
+  font-size: 0.8em;
+  font-weight: 700;
+  line-height: 1.2;
+  vertical-align: middle;
 }
 </style>

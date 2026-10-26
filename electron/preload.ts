@@ -34,6 +34,7 @@ const api = {
         detail: (problemId: number, cacheOnly = false) => invoke<CachedValue<ProblemDetail>>(IPC.problemDetail, { problemId, cacheOnly }),
     },
     contest: {
+        replay: (contestId: number) => invoke<import('../src/shared/types.ts').ContestReplay>(IPC.contestReplay, { contestId }),
         problems: (contestId: number, cacheOnly = false) => invoke<ContestProblem[]>(IPC.contestProblems, { contestId, cacheOnly }),
         list: (page = 1, cacheOnly = false) => invoke<CachedValue<ContestListPage>>(IPC.contestList, { page, cacheOnly }),
         detail: (contestId: number, cacheOnly = false) => invoke<CachedValue<ContestDetail>>(IPC.contestDetail, { contestId, cacheOnly }),
@@ -63,6 +64,8 @@ const api = {
         }).then((r) => r.settings),
     },
     app: {
+        respondQuit: (confirmed: boolean) => invoke<void>(IPC.appQuitResponse, { confirmed }),
+        openLink: (url: string) => invoke<void>(IPC.appOpenLink, { url }),
         version: () => invoke<{
             version: string;
         }>(IPC.appVersion).then((r) => r.version),
@@ -78,6 +81,7 @@ const api = {
         board: (cacheFirst = false) => invoke<MonthlyBoard>(IPC.monthlyBoard, { cacheFirst }),
     },
     downloads: {
+        cancel: (id: string) => invoke<void>(IPC.downloadCancel, { id }),
         list: (cacheFirst = false) => invoke<SoftwareEntry[]>(IPC.softwareList, { cacheFirst }),
     },
     cache: {
@@ -86,6 +90,21 @@ const api = {
         }>(IPC.cacheClear),
     },
     events: {
+        onExportProgress: (handler: (progress: { done: number; total: number; problemId: number }) => void) => {
+            const listener = (_event: unknown, progress: { done: number; total: number; problemId: number }) => handler(progress);
+            ipcRenderer.on(IPC.exportProgress, listener);
+            return () => ipcRenderer.removeListener(IPC.exportProgress, listener);
+        },
+        onDownloadProgress: (handler: (progress: import('../src/shared/types.ts').DownloadProgress) => void) => {
+            const listener = (_event: unknown, progress: import('../src/shared/types.ts').DownloadProgress) => handler(progress);
+            ipcRenderer.on(IPC.downloadProgress, listener);
+            return () => ipcRenderer.removeListener(IPC.downloadProgress, listener);
+        },
+        onQuitRequested: (handler: () => void) => {
+            const listener = () => handler();
+            ipcRenderer.on(IPC.appQuitRequested, listener);
+            return () => ipcRenderer.removeListener(IPC.appQuitRequested, listener);
+        },
         onPopupBlocked: (handler: (url: string) => void) => {
             const listener = (_event: unknown, url: string) => handler(url);
             ipcRenderer.on(IPC.popupBlocked, listener);
@@ -93,6 +112,7 @@ const api = {
         },
     },
     source: {
+        details: (solutionId: number) => invoke<import('../src/shared/types.ts').JudgeDetails>(IPC.sourceDetails, { solutionId }),
         get: (solutionId: number) => invoke<string | null>(IPC.sourceGet, { solutionId }),
         compare: (leftSolutionId: number, rightSolutionId: number) => invoke<DiffLine[]>(IPC.sourceCompare, { leftSolutionId, rightSolutionId }),
         exportAcCode: (payload: {
@@ -107,6 +127,16 @@ const api = {
         list: (query: StatusQuery = {}) => invoke<StatusPage>(IPC.statusList, query),
     },
     bbs: {
+        deletePost: (postId: number) => invoke(IPC.bbsDeletePost, { postId }),
+        deleteReply: (replyId: number) => invoke(IPC.bbsDeleteReply, { replyId }),
+        editReply: (replyId: number, content: string) => invoke(IPC.bbsEditReply, { replyId, content }),
+        captcha: (request: import('../src/shared/types.ts').CaptchaRequest) => invoke<void>(IPC.bbsCaptcha, request),
+        captchaState: (id: string) => invoke<import('../src/shared/types.ts').CaptchaState | null>(IPC.bbsCaptchaSnapshot, { id }),
+        onCaptchaState: (handler: (state: import('../src/shared/types.ts').CaptchaState) => void) => {
+            const listener = (_event: unknown, state: import('../src/shared/types.ts').CaptchaState) => handler(state);
+            ipcRenderer.on(IPC.bbsCaptchaState, listener);
+            return () => ipcRenderer.removeListener(IPC.bbsCaptchaState, listener);
+        },
         boards: (cacheOnly = false) => invoke<CachedValue<unknown>>(IPC.bbsBoards, { cacheOnly }).then((r) => r.value),
         posts: (query: {
             boardId?: number;
@@ -138,4 +168,10 @@ const api = {
     },
 } as const;
 export type XmojApi = typeof api;
-contextBridge.exposeInMainWorld('xmoj', api);
+if (process.argv.includes('--xmoj-turnstile')) {
+    // The remote verification document gets only one-way widget reports, never
+    // the application's account, filesystem, download or discussion APIs.
+    contextBridge.exposeInMainWorld('turnstileBridge', {
+        report: (state: Omit<import('../src/shared/types.ts').CaptchaState, 'id'>) => ipcRenderer.send(IPC.bbsCaptchaReport, state),
+    });
+} else contextBridge.exposeInMainWorld('xmoj', api);

@@ -53,8 +53,13 @@ export function fetchUserProfile(username: string, cacheOnly = false): Promise<U
 export function fetchNavInfo(): Promise<NavInfo> {
     return window.xmoj.nav.info();
 }
+const userInfoRequests = new Map<string, Promise<UserInfo>>();
 export function fetchUserInfo(username: string): Promise<UserInfo> {
-    return window.xmoj.user.info(username);
+    const existing = userInfoRequests.get(username);
+    if (existing) return existing;
+    const request = window.xmoj.user.info(username).finally(() => { userInfoRequests.delete(username); });
+    userInfoRequests.set(username, request);
+    return request;
 }
 export function userExists(username: string): Promise<boolean> {
     return window.xmoj.user.exists(username);
@@ -99,17 +104,22 @@ export function fetchPosts(query: {
 export function fetchPost(postId: number, page = 1, cacheOnly = false): Promise<unknown> {
     return window.xmoj.bbs.post(postId, page, cacheOnly);
 }
+export function deleteDiscussionPost(postId: number): Promise<unknown> { return window.xmoj.bbs.deletePost(postId); }
+export function deleteDiscussionReply(replyId: number): Promise<unknown> { return window.xmoj.bbs.deleteReply(replyId); }
+export function editDiscussionReply(replyId: number, content: string): Promise<unknown> { return window.xmoj.bbs.editReply(replyId, content); }
 export function createPost(payload: {
     boardId: number;
     title: string;
     content: string;
     problemId?: number;
+    captchaSecretKey?: string;
 }): Promise<unknown> {
     return window.xmoj.bbs.newPost(payload);
 }
 export function createReply(payload: {
     postId: number;
     content: string;
+    captchaSecretKey?: string;
 }): Promise<unknown> {
     return window.xmoj.bbs.newReply(payload);
 }

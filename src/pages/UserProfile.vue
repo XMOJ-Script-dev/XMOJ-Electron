@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import UserChip from '@/components/UserChip.vue';
+import ProfileCharts from '@/components/ProfileCharts.vue';
+import { userColor } from '@/lib/user-color';
 import { fetchUserProfile } from '@/services/api';
 import { usePanel } from '@/stores/panel';
 import { useNavigation } from '@/stores/navigation';
@@ -78,12 +80,14 @@ watch(() => panel.profileUsername.value, (name) => {
           <ChevronLeft />
           返回
         </Button>
+        <form class="flex items-center gap-2" @submit.prevent="load">
         <Input v-model="username" class="w-40" placeholder="用户名" />
-        <Button variant="outline" size="sm" :disabled="loading" @click="load">
+        <Button type="submit" variant="outline" size="sm" :disabled="loading">
           <Loader2 v-if="loading" class="animate-spin" />
           <RefreshCw v-else />
           载入
         </Button>
+        </form>
       </div>
     </div>
 
@@ -97,8 +101,11 @@ watch(() => panel.profileUsername.value, (name) => {
         <div class="flex flex-wrap items-center gap-3">
           <UserChip :username="profile.username" />
           <Badge variant="secondary">已解决 {{ profile.solvedTotal }}</Badge>
+          <div class="ml-auto text-right"><p class="text-xs text-muted-foreground">Rating</p><p class="font-mono text-3xl font-semibold tabular-nums" :style="{ color: userColor(profile.username, profile.rating) }">{{ profile.rating ?? 0 }}</p></div>
         </div>
       </section>
+
+      <ProfileCharts :profile="profile" />
 
       <section class="space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -113,7 +120,7 @@ watch(() => panel.profileUsername.value, (name) => {
             size="xs"
             variant="outline"
             :title="`尝试 ${problem.attempts} 次`"
-            @click="navigation.viewProblem(problem.id)"
+            @click="panel.close(); navigation.viewProblem(problem.id)"
           >
             {{ problem.id }}
           </Button>

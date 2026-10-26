@@ -154,27 +154,26 @@ onMounted(() => void loadThreads());
         <h1 class="text-2xl font-semibold tracking-tight">短消息</h1>
         <p class="text-sm text-muted-foreground">站内私信</p>
       </div>
-      <div class="flex items-center gap-2">
+      <form class="flex items-center gap-2" @submit.prevent="startConversation">
         <Input
           id="mail-recipient"
           v-model="newRecipient"
           class="w-40"
           placeholder="用户名"
-          @keyup.enter="startConversation"
         />
         <Button
+          type="submit"
           variant="outline"
           size="sm"
           :disabled="!newRecipient.trim() || checkingUser"
-          @click="startConversation"
         >
           <Loader2 v-if="checkingUser" class="animate-spin" />
           新建会话
         </Button>
-        <Button variant="outline" size="icon" :disabled="loading" title="刷新" @click="loadThreads">
+        <Button type="button" variant="outline" size="icon" :disabled="loading" title="刷新" @click="loadThreads">
           <RefreshCw :class="loading ? 'animate-spin' : ''" />
         </Button>
-      </div>
+      </form>
     </div>
 
     <div

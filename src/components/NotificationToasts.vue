@@ -10,17 +10,22 @@ const POLL_INTERVAL_MS = 60000;
 const session = useSession();
 const navigation = useNavigation();
 const notices = ref<CommunityNotification[]>([]);
-const seen = new Set<number>();
+const seen = new Set<string>();
+let seenUser = '';
+const noticeKey = (notice: CommunityNotification) => `${notice.kind}:${notice.mentionId}`;
 async function refresh(): Promise<void> {
     if (!session.state.authenticated)
         return;
+    const user = session.state.user?.username ?? '';
+    if (seenUser !== user) { seenUser = user; seen.clear(); notices.value = []; }
     try {
         const items = await pollNotices();
-        const fresh = items.filter((item) => !seen.has(item.mentionId));
+        if (!session.state.authenticated || session.state.user?.username !== user) return;
+        const fresh = items.filter((item) => !seen.has(noticeKey(item)));
         if (fresh.length === 0)
             return;
         for (const item of fresh)
-            seen.add(item.mentionId);
+            seen.add(noticeKey(item));
         notices.value = [...fresh, ...notices.value].slice(0, 5);
     }
     catch {
@@ -32,11 +37,12 @@ const poller = createPoller({
     shouldContinue: () => session.state.authenticated && !document.hidden,
 });
 function dismiss(notice: CommunityNotification): void {
-    notices.value = notices.value.filter((item) => item.mentionId !== notice.mentionId);
+    notices.value = notices.value.filter((item) => noticeKey(item) !== noticeKey(notice));
 }
 function open(notice: CommunityNotification): void {
     if (notice.kind === 'bbs') {
-        navigation.navigate('discussion');
+        if (notice.postId) navigation.viewThread(notice.postId, notice.pageNumber || 1);
+        else navigation.navigate('discussion');
     }
     else {
         navigation.navigate('mail');
@@ -61,7 +67,7 @@ onBeforeUnmount(() => {
   <div class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-80 flex-col gap-2">
     <div
       v-for="notice in notices"
-      :key="notice.mentionId"
+      :key="noticeKey(notice)"
       class="pointer-events-auto rounded-lg border bg-popover p-3 shadow-lg"
     >
       <div class="flex items-start gap-2">

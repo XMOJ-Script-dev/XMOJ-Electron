@@ -195,15 +195,15 @@ const hasResults = computed(() => visible.value.length > 0);
       <template v-else>还没有载入题目</template>
     </div>
 
-    <div v-if="hasResults" class="flex items-center justify-between text-xs text-muted-foreground">
-      <span>共 {{ filtered.length }} 题</span>
-    </div>
-
     <Pagination
       v-if="hasResults"
       v-model:page="page"
       :total-pages="totalPages"
       :disabled="loading"
-    />
+    >
+      <template #summary>
+        <span class="ml-3 text-xs">共 {{ filtered.length }} 题</span>
+      </template>
+    </Pagination>
   </div>
 </template>

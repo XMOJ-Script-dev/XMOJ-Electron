@@ -55,7 +55,7 @@ watch(contestId, () => void load());
           {{ rank?.title || '比赛排名' }}
         </h1>
         <p class="text-sm text-muted-foreground">
-          比赛 #{{ contestId }} · 共 {{ rank?.rows.length ?? 0 }} 人
+          比赛 #{{ contestId }}
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">

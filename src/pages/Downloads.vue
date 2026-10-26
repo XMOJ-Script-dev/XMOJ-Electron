@@ -7,7 +7,8 @@ import { useErrorToast } from '@/composables/useErrorToast';
 import { useToasts } from '@/stores/toasts';
 import { fetchSoftwareList } from '@/services/api';
 import type { SoftwareEntry } from '@/shared/types';
-const entries = ref<SoftwareEntry[]>([]);
+import { SOFTWARE } from '@/shared/software';
+const entries = ref<SoftwareEntry[]>(SOFTWARE);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const filter = ref('');
@@ -44,26 +45,7 @@ async function load(): Promise<void> {
     }
 }
 function openEntry(entry: SoftwareEntry): void {
-    void window.xmoj.app.dialog({
-        title: '下载',
-        message: entry.name,
-        detail: `${entry.url}\n\n请在浏览器中打开该链接完成下载。`,
-        buttons: [
-            { id: 'cancel', label: '取消' },
-            { id: 'open', label: '复制链接' },
-        ],
-        defaultId: 'cancel',
-        cancelId: 'cancel',
-    }).then(async (result) => {
-        if (result.buttonId !== 'open')
-            return;
-        const { copyText } = await import('@/composables/useClipboard');
-        const ok = await copyText(entry.url);
-        if (ok)
-            toasts.success('下载链接已复制');
-        else
-            toasts.error('复制失败');
-    });
+    void window.xmoj.app.openLink(entry.url).catch(error => toasts.error(String(error)));
 }
 onMounted(() => void load());
 </script>

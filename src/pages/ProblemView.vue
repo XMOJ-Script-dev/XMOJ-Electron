@@ -8,7 +8,8 @@ import { fetchProblemDetail } from '@/services/api';
 import { useCopy } from '@/composables/useClipboard';
 import { useErrorToast } from '@/composables/useErrorToast';
 import { useNavigation } from '@/stores/navigation';
-import { type ProblemDetail } from '@/shared/types';
+import { type ProblemCard, type ProblemDetail } from '@/shared/types';
+import { htmlToMarkdown } from '@/lib/markdown-copy';
 const navigation = useNavigation();
 const { copy, isCopied } = useCopy(2000);
 const problemId = ref(navigation.activeProblemId.value || 0);
@@ -18,15 +19,14 @@ const error = ref<string | null>(null);
 useErrorToast(error);
 const std = ref<string | null>(null);
 const stdError = ref<string | null>(null);
-const statementText = computed(() => textOf(problem.value?.statementHtml ?? ''));
+const statementText = computed(() => cards.value.map(card => `## ${card.title}\n\n${cardMarkdown(card)}`).join('\n\n'));
 const cards = computed(() => problem.value?.cards ?? []);
-const hasSamples = computed(() => cards.value.some((card) => card.isSamples));
-function textOf(html: string): string {
-    if (!html)
-        return '';
-    const container = document.createElement('div');
-    container.innerHTML = html;
-    return (container.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
+let request = 0;
+function cardMarkdown(card: ProblemCard): string {
+    const parts = card.isSamples ? card.samples.map((sample, index) =>
+        `### 样例输入 #${index + 1}\n\n\`\`\`\n${sample.input}\n\`\`\`\n\n### 样例输出 #${index + 1}\n\n\`\`\`\n${sample.output}\n\`\`\``) : [];
+    parts.push(htmlToMarkdown(card.html));
+    return parts.filter(Boolean).join('\n\n');
 }
 async function load(): Promise<void> {
     const id = Number(problemId.value);
@@ -35,28 +35,30 @@ async function load(): Promise<void> {
         return;
     }
     loading.value = true;
+    const current = ++request;
     error.value = null;
     std.value = null;
     stdError.value = null;
     try {
-        const first = await fetchProblemDetail(id, true);
-        problem.value = first.value;
-        navigation.activeProblemId.value = id;
-        if (first.fromCache) {
-            const fresh = await fetchProblemDetail(id, false);
-            problem.value = fresh.value;
+        const fresh = await fetchProblemDetail(id, false);
+        if (current !== request) return;
+        if (/题目不可用/.test(fresh.value.title)) {
+            error.value = '题目不可用';
+            return;
         }
+        problem.value = fresh.value;
+        navigation.activeProblemId.value = id;
     }
     catch (caught) {
+        if (current !== request) return;
         error.value = caught instanceof Error ? caught.message : String(caught);
-        problem.value = null;
     }
     finally {
-        loading.value = false;
+        if (current === request) loading.value = false;
     }
 }
 function goSubmit(): void {
-    navigation.submitProblem(Number(problemId.value));
+    navigation.submitProblem(problem.value?.id ?? Number(problemId.value));
 }
 watch(() => navigation.activeProblemId.value, (id) => {
     if (id > 0 && id !== problemId.value) {
@@ -82,7 +84,7 @@ onMounted(() => {
           <template v-else>输入题目编号以查看题面</template>
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <form class="flex flex-wrap items-center gap-2" @submit.prevent="load">
         <Input
           id="problem-view-id"
           v-model.number="problemId"
@@ -90,21 +92,20 @@ onMounted(() => {
           placeholder="题目编号"
           inputmode="numeric"
         />
-        <Button variant="outline" size="sm" :disabled="loading" @click="load">
+        <Button type="submit" variant="outline" size="sm" :disabled="loading">
           <Loader2 v-if="loading" class="animate-spin" />
           <RefreshCw v-else />
           载入
         </Button>
-      </div>
+      </form>
     </div>
 
-    <div v-if="loading" class="space-y-2">
+    <div v-if="loading && !problem" class="space-y-2">
       <Skeleton class="h-10 w-full rounded-lg" />
       <Skeleton class="h-64 w-full rounded-lg" />
     </div>
 
     <template v-else-if="problem">
-      <!-- Problem information: the judge's `.jumbotron` header, as chips. -->
       <section class="rounded-xl" data-slot="problem-head">
         <div class="flex flex-wrap gap-2">
           <span
@@ -136,11 +137,11 @@ onMounted(() => {
         data-slot="problem-card"
       >
         <header class="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-          <h2 class="text-sm font-medium">{{ card.title || `第 ${index + 1} 节` }}</h2>
+          <h2 class="text-sm font-semibold">{{ card.title }}</h2>
           <Button
             size="xs"
             variant="ghost"
-            @click="copy(textOf(card.html), `card-${index}`)"
+            @click="copy(cardMarkdown(card), `card-${index}`)"
           >
             <Check v-if="isCopied(`card-${index}`)" />
             <Copy v-else />
@@ -185,46 +186,10 @@ onMounted(() => {
               <pre class="overflow-x-auto px-3 py-2 font-mono text-xs">{{ sample.output }}</pre>
             </div>
           </div>
+          <AnnouncementBody v-if="card.html" class="text-sm leading-relaxed" :source="card.html" format="statement" />
         </div>
 
-        <AnnouncementBody v-else class="px-4 py-3 text-sm leading-relaxed" :source="card.html" />
-      </article>
-
-      <article v-if="cards.length === 0" class="rounded-xl border bg-card" data-slot="problem-card">
-        <header class="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-          <h2 class="text-sm font-medium">题目描述</h2>
-          <Button size="xs" variant="ghost" @click="copy(statementText, 'fallback')">
-            <Check v-if="isCopied('fallback')" />
-            <Copy v-else />
-            {{ isCopied('fallback') ? '已复制' : '复制' }}
-          </Button>
-        </header>
-        <AnnouncementBody class="px-4 py-3 text-sm" :source="problem.statementHtml" />
-      </article>
-
-      <!-- Samples that were not part of a card. -->
-      <article
-        v-if="!hasSamples && problem.samples.length"
-        class="rounded-xl border bg-card"
-        data-slot="problem-card"
-      >
-        <header class="border-b px-4 py-2.5">
-          <h2 class="text-sm font-medium">样例输入输出</h2>
-        </header>
-        <div class="space-y-3 p-4">
-          <div
-            v-for="(sample, index) in problem.samples"
-            :key="index"
-            class="grid gap-3 md:grid-cols-2"
-          >
-            <pre
-              class="overflow-x-auto rounded-lg border p-3 font-mono text-xs"
-            >{{ sample.input }}</pre>
-            <pre
-              class="overflow-x-auto rounded-lg border p-3 font-mono text-xs"
-            >{{ sample.output }}</pre>
-          </div>
-        </div>
+        <AnnouncementBody v-else class="px-4 py-3 text-sm leading-relaxed" :source="card.html" format="statement" />
       </article>
     </template>
 

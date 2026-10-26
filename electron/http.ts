@@ -205,10 +205,12 @@ export interface RequestOptions {
 export class HttpClient {
     readonly jar: CookieJar;
     private readonly userAgent: string;
+    private readonly fetcher: (url: URL, init: RequestInit) => Promise<Response>;
     private static readonly MAX_REDIRECTS = 8;
-    constructor(jar: CookieJar = new CookieJar(), userAgent: string = DEFAULT_UA) {
+    constructor(jar: CookieJar = new CookieJar(), userAgent: string = DEFAULT_UA, fetcher: (url: URL, init: RequestInit) => Promise<Response> = (url, init) => fetch(url, init)) {
         this.jar = jar;
         this.userAgent = userAgent;
+        this.fetcher = fetcher;
     }
     async request(url: string | URL, options: RequestOptions = {}): Promise<HttpResponse> {
         const { method = 'GET', form, body, headers: extraHeaders = {}, timeoutMs = 30000, redirect = true, } = options;
@@ -235,7 +237,7 @@ export class HttpClient {
             const timer = setTimeout(() => controller.abort(), timeoutMs);
             let response: Response;
             try {
-                response = await fetch(current, {
+                response = await this.fetcher(current, {
                     method: methodForHop,
                     headers,
                     body: bodyForHop,

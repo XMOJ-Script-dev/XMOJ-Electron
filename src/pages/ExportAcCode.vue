@@ -1,12 +1,14 @@
-<script setup lang="ts">import { computed, onMounted, ref } from 'vue';
+<script setup lang="ts">import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useErrorToast } from '@/composables/useErrorToast';
 import { Download, FolderOpen, Loader2 } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { exportAcCode, fetchProblemset } from '@/services/api';
+import { exportAcCode, fetchProblemset, fetchUserProfile } from '@/services/api';
+import { useSession } from '@/stores/session';
 import type { ExportResult, ProblemsetEntry } from '@/shared/types';
-const LANGUAGE_FILTERS = ['C++', 'C', 'Python', 'Java', 'Pascal'];
+const LANGUAGE_FILTERS = ['C++', 'C', 'Pascal'];
+const session = useSession();
 const problems = ref<ProblemsetEntry[]>([]);
 const loading = ref(false);
 const exporting = ref(false);
@@ -15,15 +17,22 @@ useErrorToast(error);
 const result = ref<ExportResult | null>(null);
 const search = ref('');
 const onlySolved = ref(true);
-const selectedLanguages = ref<string[]>(['C++', 'C', 'Python', 'Java', 'Pascal']);
+const selectedLanguages = ref<string[]>([...LANGUAGE_FILTERS]);
+const progress = ref<{ done: number; total: number; problemId: number } | null>(null);
+let unsubscribe: (() => void) | undefined;
 let token = 0;
 async function load(): Promise<void> {
     const current = ++token;
     loading.value = true;
     error.value = null;
     try {
-        const first = await fetchProblemset({ page: 1 });
-        problems.value = first.value.problems;
+        const username = session.state.user?.username;
+        if (!username) throw new Error('请先登录');
+        const profile = await fetchUserProfile(username);
+        const first = await fetchProblemset({ page: 1 }, true).catch(() => null);
+        if (current !== token) return;
+        const titles = new Map(first?.value.problems.map(problem => [problem.id, problem.title]) ?? []);
+        problems.value = profile.problems.map(problem => ({ id: problem.id, title: titles.get(problem.id) ?? `题目 ${problem.id}`, url: problem.url, solved: true, accepted: null, submissions: problem.attempts, acceptanceRate: null }));
     }
     catch (caught) {
         error.value = caught instanceof Error ? caught.message : String(caught);
@@ -51,15 +60,16 @@ function toggleLanguage(language: string): void {
     selectedLanguages.value = [...set];
 }
 async function runExport(): Promise<void> {
-    if (candidates.value.length === 0)
+    if (exporting.value || candidates.value.length === 0 || !selectedLanguages.value.length)
         return;
     exporting.value = true;
     error.value = null;
     result.value = null;
+    progress.value = null;
     try {
         result.value = await exportAcCode({
             problemIds: candidates.value.map((p) => p.id),
-            languages: selectedLanguages.value,
+            languages: [...selectedLanguages.value],
         });
     }
     catch (caught) {
@@ -69,7 +79,11 @@ async function runExport(): Promise<void> {
         exporting.value = false;
     }
 }
-onMounted(() => void load());
+onMounted(() => {
+    unsubscribe = window.xmoj.events.onExportProgress(value => { if (exporting.value) progress.value = value; });
+    void load();
+});
+onBeforeUnmount(() => { token++; unsubscribe?.(); });
 </script>
 
 <template>
@@ -79,7 +93,7 @@ onMounted(() => void load());
         <h1 class="text-2xl font-semibold tracking-tight">导出 AC 代码</h1>
         <p class="text-sm text-muted-foreground">把已通过的题目代码打包成一个 zip</p>
       </div>
-      <Button :disabled="exporting || candidates.length === 0" @click="runExport">
+      <Button :disabled="loading || exporting || candidates.length === 0 || !selectedLanguages.length" @click="runExport">
         <Loader2 v-if="exporting" class="animate-spin" />
         <Download v-else />
         {{ exporting ? '正在导出…' : `导出 ${candidates.length} 题` }}
@@ -87,8 +101,8 @@ onMounted(() => void load());
     </div>
 
     <div
-      v-if="result"
-      class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400"
+      v-if="result && !result.cancelled"
+      class="rounded-lg border px-4 py-3 text-sm" :class="result.written ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400'"
     >
       <p class="flex items-center gap-2 font-medium">
         <FolderOpen class="size-4" />
@@ -100,8 +114,13 @@ onMounted(() => void load());
       </p>
     </div>
 
+    <div v-if="exporting && progress" class="space-y-2 rounded-lg border p-4 text-sm" role="progressbar" :aria-valuenow="progress.done" :aria-valuemin="0" :aria-valuemax="progress.total">
+      <p>正在处理 #{{ progress.problemId }} · {{ progress.done }} / {{ progress.total }}</p>
+      <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full bg-primary transition-[width]" :style="{ width: `${progress.done / Math.max(1, progress.total) * 100}%` }" /></div>
+    </div>
+
     <div class="flex flex-wrap items-center gap-3">
-      <Input v-model="search" class="max-w-56" placeholder="按编号或标题筛选" />
+      <Input v-model="search" class="max-w-56" placeholder="按编号筛选" />
       <label class="flex cursor-pointer items-center gap-2 text-sm">
         <input
           v-model="onlySolved"
@@ -148,9 +167,5 @@ onMounted(() => void load());
         </p>
       </div>
     </div>
-
-    <p class="text-xs text-muted-foreground">
-      导出会逐题向判题站查询通过记录与代码，题目较多时请耐心等待。
-    </p>
   </div>
 </template>

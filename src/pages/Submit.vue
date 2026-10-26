@@ -135,7 +135,7 @@ onMounted(() => {
           <template v-else>选择题目并编写代码</template>
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <form class="flex items-center gap-2" @submit.prevent="load">
         <Input
           id="submit-problem-id"
           v-model.number="problemId"
@@ -143,12 +143,13 @@ onMounted(() => {
           placeholder="题目编号"
           inputmode="numeric"
         />
-        <Button variant="outline" size="sm" :disabled="loading" @click="load">
+        <Button type="submit" variant="outline" size="sm" :disabled="loading">
           <Loader2 v-if="loading" class="animate-spin" />
           载入题目
         </Button>
         <Button
           v-if="problem"
+          type="button"
           variant="ghost"
           size="sm"
           @click="navigation.viewProblem(problem.id)"
@@ -156,7 +157,7 @@ onMounted(() => {
           <ExternalLink />
           查看题面
         </Button>
-      </div>
+      </form>
     </div>
 
     <div

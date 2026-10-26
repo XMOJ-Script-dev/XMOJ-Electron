@@ -170,6 +170,7 @@ export interface AcCodeEntry {
     source: string;
 }
 export interface ExportResult {
+    cancelled?: boolean;
     written: number;
     skipped: number[];
     path: string | null;
@@ -201,6 +202,9 @@ export interface SolvedProblem {
     url: string;
 }
 export interface UserProfile {
+    rating?: number;
+    statistics?: { label: string; count: number; verdict: number }[];
+    activity?: { timestamp: number; submitted: number; accepted: number }[];
     username: string;
     nick: string;
     solvedTotal: number;
@@ -251,12 +255,14 @@ export interface UserTag {
     color: string;
 }
 export interface UserInfo {
+    rating?: number;
     username: string;
     nick: string | null;
     isAdmin: boolean;
     badge: UserTag | null;
 }
 export interface ContestSummary {
+    replay?: boolean | string;
     contestId: number;
     title: string;
     startTime: string | null;
@@ -299,6 +305,8 @@ export interface MonthlyBoard {
     intro: string;
     cards: MonthlyCard[];
     url: string;
+    countdown?: HomeCountdown[];
+    serverTime?: number;
 }
 export interface SoftwareEntry {
     name: string;
@@ -315,6 +323,29 @@ export interface DialogButton {
     id: string;
     label: string;
 }
+export interface ContestReplay { videos: { title: string; sources: { url: string; label: string }[] }[] }
+export interface DownloadProgress {
+    id: string;
+    fileName: string;
+    receivedBytes: number;
+    totalBytes: number;
+    state: 'progressing' | 'paused' | 'completed' | 'cancelled' | 'interrupted';
+}
+export interface CaptchaBounds { x: number; y: number; width: number; height: number; visible: boolean; clipLeft?: number; clipRight?: number }
+export interface CaptchaRequest { id: string; action: 'mount' | 'bounds' | 'reset' | 'unmount'; bounds?: CaptchaBounds }
+export interface CaptchaState { id: string; status: 'loading' | 'ready' | 'success' | 'error' | 'expired'; token?: string; message?: string }
+export interface JudgeTest {
+    name: string;
+    group: string | null;
+    status: string;
+    timeMs: number;
+    memoryKb: number;
+    score: number | null;
+}
+export interface JudgeDetails {
+    tests: JudgeTest[];
+    diagnostic: string;
+}
 export interface DialogRequest {
     title: string;
     message: string;
@@ -324,6 +355,11 @@ export interface DialogRequest {
     cancelId?: string;
 }
 export const IPC = {
+    contestReplay: 'xmoj:contest:replay',
+    bbsDeletePost: 'xmoj:bbs:deletePost',
+    bbsDeleteReply: 'xmoj:bbs:deleteReply',
+    bbsEditReply: 'xmoj:bbs:editReply',
+    downloadCancel: 'xmoj:download:cancel',
     sessionGet: 'xmoj:session:get',
     sessionLogin: 'xmoj:session:login',
     sessionLogout: 'xmoj:session:logout',
@@ -350,13 +386,23 @@ export const IPC = {
     appVersion: 'xmoj:app:version',
     appFetchJson: 'xmoj:app:fetch-json',
     appDialog: 'xmoj:app:dialog',
+    appOpenLink: 'xmoj:app:open-link',
+    sourceDetails: 'xmoj:source:details',
     appQuitConfirm: 'xmoj:app:quit-confirm',
+    appQuitRequested: 'xmoj:app:quit-requested',
+    appQuitResponse: 'xmoj:app:quit-response',
     cacheClear: 'xmoj:cache:clear',
     popupBlocked: 'xmoj:popup-blocked',
+    downloadProgress: 'xmoj:download-progress',
     sourceGet: 'xmoj:source:get',
     sourceCompare: 'xmoj:source:compare',
     exportAcCode: 'xmoj:source:export',
+    exportProgress: 'xmoj:source:export:progress',
     bbsBoards: 'xmoj:bbs:boards',
+    bbsCaptcha: 'xmoj:bbs:captcha',
+    bbsCaptchaState: 'xmoj:bbs:captcha:state',
+    bbsCaptchaReport: 'xmoj:bbs:captcha:report',
+    bbsCaptchaSnapshot: 'xmoj:bbs:captcha:snapshot',
     bbsPosts: 'xmoj:bbs:posts',
     bbsPost: 'xmoj:bbs:post',
     bbsNewPost: 'xmoj:bbs:new-post',

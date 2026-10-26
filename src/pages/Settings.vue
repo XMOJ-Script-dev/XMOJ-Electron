@@ -157,10 +157,6 @@ const toggles: {
       </p>
     </section>
 
-    <!--
-      Cloud sync is explicit on purpose. The userscript uploads on a timer; doing
-      that here would silently overwrite an account's stored preferences.
-    -->
     <section class="space-y-3 rounded-xl border p-4">
       <h2 class="text-sm font-medium">云同步设置</h2>
       <p class="text-xs text-muted-foreground">

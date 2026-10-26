@@ -36,6 +36,7 @@ function go(target: number): void {
       >
         / 共 <span class="font-medium text-foreground">{{ totalPages }}</span> 页</span
       >
+      <slot name="summary" />
     </p>
 
     <div class="flex items-center gap-2">

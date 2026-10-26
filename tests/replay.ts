@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { fetchContestReplay } from '../electron/replay.ts';
+import type { HttpClient } from '../electron/http.ts';
+const http = (body: string) => ({ get: async () => ({ status: 200, body }) }) as unknown as HttpClient;
+const html = `<script>new Aliplayer({ id:'player',vid:'fixture-video',accessKeyId:'fixture-key',accessKeySecret:'fixture-secret',securityToken:'fixture-token',region:'cn-shanghai'},function(){});</script>`;
+let calls = 0;
+const replay = await fetchContestReplay(http(html), 10865, async request => {
+    calls++;
+    const url = new URL(String(request));
+    assert.equal(url.hostname, 'vod.cn-shanghai.aliyuncs.com');
+    assert.equal(url.searchParams.get('VideoId'), 'fixture-video');
+    assert.equal(url.searchParams.get('Formats'), 'mp4');
+    assert.ok(url.searchParams.get('Signature'));
+    return Response.json({ VideoBase: { Title: 'Fixture replay' }, PlayInfoList: { PlayInfo: [{ PlayURL: 'https://media.example.test/movie.mp4', Format: 'mp4', Height: 720 }] } });
+});
+assert.equal(calls, 1);
+assert.deepEqual(replay, { videos: [{ title: 'Fixture replay', sources: [{ url: 'https://media.example.test/movie.mp4', label: '720p' }] }] });
+assert.ok(!JSON.stringify(replay).includes('fixture-secret'));
+await assert.rejects(() => fetchContestReplay(http('Not Invited!'), 1), /无权/);
+await assert.rejects(() => fetchContestReplay(http('<p>No video</p>'), 1), /暂无/);
+await assert.rejects(() => fetchContestReplay(http(html), 1, async () => new Response('', { status: 403 })), /鉴权失败/);
+console.log('Replay parsing, signed VOD request, credential isolation and denied/missing playback passed.');

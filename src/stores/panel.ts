@@ -6,6 +6,7 @@ const rankTitle = ref('');
 const rankOi = ref(true);
 const sourceSolutionId = ref(0);
 const sourceTitle = ref('');
+const sourceLanguage = ref(1);
 const profileUsername = ref('');
 export function usePanel() {
     function openRank(contestId: number, title: string, oi = true): void {
@@ -14,7 +15,8 @@ export function usePanel() {
         rankOi.value = oi;
         kind.value = 'rank';
     }
-    function openSource(solutionId: number, title = ''): void {
+    function openSource(solutionId: number, title = '', language = 'C++'): void {
+        sourceLanguage.value = /python/i.test(language) ? 3 : /javascript|node/i.test(language) ? 6 : /java/i.test(language) ? 4 : /pascal/i.test(language) ? 2 : /c#|csharp/i.test(language) ? 5 : /^c$|gcc/i.test(language) ? 0 : 1;
         sourceSolutionId.value = solutionId;
         sourceTitle.value = title || `提交 #${solutionId}`;
         kind.value = 'source';
@@ -33,6 +35,7 @@ export function usePanel() {
         rankOi,
         sourceSolutionId,
         sourceTitle,
+        sourceLanguage,
         profileUsername,
         openRank,
         openSource,

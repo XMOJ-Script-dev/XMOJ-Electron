@@ -70,7 +70,7 @@ function parseSampleExplanations(node: HTMLElement): string {
         const stripped = (block.innerHTML ?? '')
             .replace(/<span\b[^>]*sampledata[^>]*>[\s\S]*?<\/span>/gi, '')
             .replace(/<span\b[^>]*sampledata[^>]*>[\s\S]*$/gi, '');
-        const html = decodeEntities(stripped).trim();
+        const html = stripped.trim();
         if (html)
             parts.push(sanitizeHtml(html));
     }
@@ -101,7 +101,7 @@ export function parseProblemCards(root: HTMLElement): ProblemCard[] {
         const rawHtml = sampleNodes.length > 0 ? explanation : (renderable.innerHTML ?? '');
         cards.push({
             title,
-            html: normalizeAssetUrls(sanitizeHtml(decodeEntities(rawHtml))),
+            html: normalizeAssetUrls(sanitizeHtml(rawHtml)),
             isSamples: sampleNodes.length > 0,
             samples,
         });

@@ -17,7 +17,7 @@ const PERSISTED_PREFIXES = [
     'contest:list:',
     'contest:detail:',
     'contest:problems:',
-    'problemset:all',
+    'problemset:v2:all',
     'problem:',
 ];
 function isPersisted(key: string): boolean {

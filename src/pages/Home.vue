@@ -1,14 +1,12 @@
 <script setup lang="ts">import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { ExternalLink, RefreshCw } from '@lucide/vue';
+import { RefreshCw } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import AnnouncementBody from '@/components/AnnouncementBody.vue';
 import { useCachedResource } from '@/composables/useAsyncResource';
 import { fetchHomeSnapshot } from '@/services/api';
-import { useNavigation } from '@/stores/navigation';
-import { XMOJ_ORIGIN } from '@/shared/types';
-const navigation = useNavigation();
+import { htmlToMarkdown } from '@/lib/markdown-copy';
 const resource = useCachedResource(() => fetchHomeSnapshot(true).catch(() => null), () => fetchHomeSnapshot(false));
 const clockOffset = ref(0);
 const now = ref(Date.now());
@@ -19,36 +17,10 @@ const clock = computed(() => {
     return (`${current.getFullYear()}-${pad(current.getMonth() + 1)}-${pad(current.getDate())} ` +
         `${pad(current.getHours())}:${pad(current.getMinutes())}:${pad(current.getSeconds())}`);
 });
-const announcements = computed(() => resource.data.value?.announcements ?? []);
+const announcements = computed(() => (resource.data.value?.announcements ?? []).map(item => ({ ...item, markdown: htmlToMarkdown(item.html) })));
 const banners = computed(() => resource.data.value?.banners ?? []);
 const countdown = computed(() => resource.data.value?.countdown ?? []);
 const notice = computed(() => resource.data.value?.notice ?? null);
-function openBanner(href: string): void {
-    if (!href)
-        return;
-    let url: URL;
-    try {
-        url = new URL(href, `${XMOJ_ORIGIN}/`);
-    }
-    catch {
-        return;
-    }
-    if (url.origin !== XMOJ_ORIGIN) {
-        return;
-    }
-    if (/contest\.php/.test(url.pathname) || /open_contest/.test(url.pathname)) {
-        navigation.navigate('contests');
-        return;
-    }
-    if (/problemset\.php/.test(url.pathname)) {
-        navigation.navigate('problemset');
-        return;
-    }
-    if (/status\.php/.test(url.pathname)) {
-        navigation.navigate('status');
-        return;
-    }
-}
 async function load(): Promise<void> {
     await resource.run();
     const serverTime = resource.data.value?.serverTime;
@@ -102,11 +74,11 @@ onBeforeUnmount(() => {
       <Skeleton v-for="index in 3" :key="index" class="h-28 w-full rounded-xl" />
     </div>
 
-    <div class="space-y-6">
-      <!-- Countdown, then the service notice, then the news list. -->
+    <div class="grid items-start gap-6 md:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
+      <div class="order-2 space-y-6 md:col-start-2 md:row-start-1">
       <div v-if="countdown.length > 0" class="space-y-3">
         <h2 class="text-sm font-medium text-muted-foreground">倒计时</h2>
-        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-2">
           <div
             v-for="item in countdown"
             :key="`${item.event}-${item.date}`"
@@ -127,11 +99,19 @@ onBeforeUnmount(() => {
       <div v-if="notice" class="space-y-3">
         <h2 class="text-sm font-medium text-muted-foreground">服务公告</h2>
         <article class="rounded-xl border bg-card">
-          <AnnouncementBody class="px-4 py-3 text-sm leading-relaxed" :source="notice" />
+          <AnnouncementBody class="service-notice px-4 py-3" :source="notice" format="markdown" />
         </article>
       </div>
 
-      <div v-if="announcements.length > 0" class="space-y-3">
+      <div v-if="banners.length > 0" class="space-y-3">
+        <h2 class="text-sm font-medium text-muted-foreground">推荐</h2>
+        <a v-for="(banner, index) in banners" :key="index" :href="banner.href" :title="banner.href" data-slot="promo-banner" class="block w-full overflow-hidden rounded-xl border bg-muted hover:shadow-sm">
+          <img :src="banner.src" class="h-auto w-full object-contain" alt="推荐" referrerpolicy="no-referrer" />
+        </a>
+      </div>
+      </div>
+
+      <div v-if="announcements.length > 0" class="order-1 min-w-0 space-y-3 md:col-start-1 md:row-start-1">
         <h2 class="text-sm font-medium text-muted-foreground">公告</h2>
         <article
           v-for="(item, index) in announcements"
@@ -146,51 +126,19 @@ onBeforeUnmount(() => {
           </header>
           <AnnouncementBody
             class="px-4 py-3 text-sm leading-relaxed"
-            :source="item.html"
+            :source="item.markdown"
+            format="markdown"
           />
         </article>
       </div>
 
       <div
         v-else-if="!resource.loading.value && !resource.error.value"
-        class="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground"
+        class="order-1 rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground md:col-start-1 md:row-start-1"
       >
         暂无公告
       </div>
 
-      <div v-if="banners.length > 0" class="space-y-3">
-        <h2 class="text-sm font-medium text-muted-foreground">推荐</h2>
-        <!--
-          `items-start` matters: the default `stretch` would force both cards to
-          the taller one's height, so a tall banner would letterbox the other.
-        -->
-        <div class="grid items-start gap-4 sm:grid-cols-2">
-          <button
-            v-for="(banner, index) in banners"
-            :key="`${banner.src}-${index}`"
-            type="button"
-            data-slot="promo-banner"
-            class="group relative flex items-center justify-center overflow-hidden rounded-xl border bg-muted transition-shadow hover:shadow-sm"
-            :title="banner.href"
-            @click="openBanner(banner.href)"
-          >
-            <!--
-              The card follows the image's own aspect ratio: a fixed height either
-              crops wide banners or letterboxes tall ones.
-            -->
-            <img
-              :src="banner.src"
-              class="block h-auto w-full object-contain"
-              alt=""
-              decoding="async"
-              referrerpolicy="no-referrer"
-            />
-            <ExternalLink
-              class="absolute top-2 right-2 size-4 text-foreground opacity-0 drop-shadow transition-opacity group-hover:opacity-100"
-            />
-          </button>
-        </div>
-      </div>
     </div>
 
     <footer

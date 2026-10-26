@@ -462,7 +462,7 @@ export function describeVerdictCode(code: number | null): {
     verdict: SubmissionVerdict;
 } {
     if (code === null || !(code in JUDGE_RESULTS)) {
-        return { label: '未知', verdict: 'other' };
+        return { label: 'Unknown', verdict: 'other' };
     }
     return JUDGE_RESULTS[code];
 }

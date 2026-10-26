@@ -59,18 +59,18 @@ const unified = computed(() => lines.value
         <h1 class="text-2xl font-semibold tracking-tight">代码对比</h1>
         <p class="text-sm text-muted-foreground">输入两个评测编号，逐行比较代码差异</p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <form class="flex flex-wrap items-center gap-2" @submit.prevent="compare">
         <Input v-model="leftId" class="w-32" placeholder="旧编号" inputmode="numeric" />
         <Input v-model="rightId" class="w-32" placeholder="新编号" inputmode="numeric" />
-        <Button size="sm" :disabled="loading" @click="compare">
+        <Button type="submit" size="sm" :disabled="loading">
           <Loader2 v-if="loading" class="animate-spin" />
           <ArrowLeftRight v-else />
           对比
         </Button>
-        <Button v-if="lines.length" size="sm" variant="outline" @click="copy(unified)">
+        <Button v-if="lines.length" type="button" size="sm" variant="outline" @click="copy(unified)">
           复制差异
         </Button>
-      </div>
+      </form>
     </div>
 
     <div v-if="lines.length" class="flex flex-wrap gap-3 text-sm">

@@ -18,6 +18,8 @@ import Settings from '@/pages/Settings.vue';
 import NotificationToasts from '@/components/NotificationToasts.vue';
 import ToastStack from '@/components/ToastStack.vue';
 import PanelHost from '@/components/PanelHost.vue';
+import MessageBox from '@/components/MessageBox.vue';
+import { showDialog } from '@/stores/dialog';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useSession } from '@/stores/session';
 import { useNavigation } from '@/stores/navigation';
@@ -40,6 +42,10 @@ const PROTECTED_VIEWS = new Set<ViewId>([
 const view = computed(() => navigation.currentView.value);
 const showLogin = computed(() => PROTECTED_VIEWS.has(view.value) && !session.state.authenticated);
 onMounted(() => {
+    window.xmoj.events.onQuitRequested(() => {
+        void showDialog({ title: '离开前确认', message: '确定要关闭 XMOJ Electron 吗？', buttons: [{ id: 'cancel', label: '取消' }, { id: 'close', label: '关闭' }], defaultId: 'close', cancelId: 'cancel' })
+            .then(result => window.xmoj.app.respondQuit(result.buttonId === 'close'));
+    });
     initPreferences();
     void session.initialise();
     window.xmoj.events.onPopupBlocked((url) => {
@@ -81,5 +87,6 @@ onMounted(() => {
     <NotificationToasts />
     <ToastStack />
     <PanelHost />
+    <MessageBox />
   </SidebarProvider>
 </template>

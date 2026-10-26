@@ -30,14 +30,11 @@ async function submit(): Promise<void> {
       <div class="mb-6 flex flex-col items-center gap-2 text-center">
         <img src="/logo.png" class="size-12 rounded-xl" alt="XMOJ" />
         <h1 class="text-lg font-semibold">登录小明的 OJ</h1>
-        <p class="text-sm text-muted-foreground">
-          使用你的 xmoj.tech 账号登录以查看题库与评测记录
-        </p>
       </div>
 
       <form class="space-y-4" @submit.prevent="submit">
         <div class="space-y-2">
-          <label class="text-sm font-medium" for="login-username">用户名（学号）</label>
+          <label class="text-sm font-medium" for="login-username">用户名</label>
           <div class="relative">
             <User
               class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -78,7 +75,7 @@ async function submit(): Promise<void> {
             class="size-4 rounded border-input accent-primary"
             :disabled="session.state.submitting"
           />
-          记住密码（由系统密钥库加密保存）
+          记住密码
         </label>
 
         <p
@@ -94,11 +91,6 @@ async function submit(): Promise<void> {
           {{ session.state.submitting ? '登录中…' : '登录' }}
         </Button>
       </form>
-
-      <p class="mt-4 text-center text-xs text-muted-foreground">
-        密码通过 HTTPS 提交至
-        <span class="font-mono">www.xmoj.tech/login.php</span>
-      </p>
     </div>
   </div>
 </template>
