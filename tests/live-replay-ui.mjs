@@ -17,6 +17,10 @@ app.whenReady().then(async () => {
         for (let i=0;i<100&&!win;i++) { [win]=BrowserWindow.getAllWindows(); if(!win) await pause(50); }
         assert.ok(win);
         if (win.webContents.isLoading()) await new Promise(resolve=>win.webContents.once('did-finish-load',resolve));
+        const mediaErrors = [];
+        win.webContents.session.webRequest.onErrorOccurred(details => {
+            if (details.resourceType === 'media') mediaErrors.push({ host: new URL(details.url).hostname, error: details.error });
+        });
         const run = code => win.webContents.executeJavaScript(code, true);
         const until = async (code,label) => { for(let i=0;i<600;i++){if(await run(code))return;await pause(100);}throw new Error(`Timed out: ${label}`); };
         await until(`!!document.querySelector('h1')&&!document.body.textContent.includes('正在恢复登录状态')`,'home');
@@ -34,7 +38,11 @@ app.whenReady().then(async () => {
         await until(`Array.from(document.querySelectorAll('main button')).some(b=>b.textContent.trim()==='比赛回放'&&!b.disabled)`,'replay entry');
         assert.ok(await run(`(()=>{const buttons=Array.from(document.querySelectorAll('main button')).map(b=>b.textContent.trim());return buttons.indexOf('返回列表')<buttons.indexOf('比赛回放')&&buttons.indexOf('比赛回放')<buttons.indexOf('OI 排名');})()`));
         await run(`Array.from(document.querySelectorAll('main button')).find(b=>b.textContent.trim()==='比赛回放').click()`);
-        await until(`!!document.querySelector('[data-slot="contest-replay"] video')&&document.querySelector('video').readyState>=1`,'actual video metadata');
+        try { await until(`!!document.querySelector('[data-slot="contest-replay"] video')&&document.querySelector('video').readyState>=1`,'actual video metadata'); }
+        catch (error) {
+            console.log('Replay diagnostics:', await run(`({message:document.querySelector('[data-slot="contest-replay"] [role="alert"]')?.textContent,video:(()=>{const v=document.querySelector('video');return v?{ready:v.readyState,network:v.networkState,error:v.error?.code}:null})()})`), mediaErrors);
+            throw error;
+        }
         const layout = await run(`(()=>{const root=document.querySelector('[data-slot="contest-replay"]');const r=root.getBoundingClientRect();const main=document.querySelector('[data-slot="sidebar-inset"]');return {left:r.left,expected:main.getBoundingClientRect().left,right:r.right,bottom:r.bottom,width:innerWidth,height:innerHeight,controls:!!root.querySelector('[data-slot="replay-controls"]')};})()`);
         assert.ok(Math.abs(layout.left-layout.expected)<2&&Math.abs(layout.right-layout.width)<2&&Math.abs(layout.bottom-layout.height)<2&&layout.controls,'player covers content, not sidebar: '+JSON.stringify(layout));
         await run(`document.querySelector('[aria-label="播放"]').click()`);

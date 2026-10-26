@@ -40,9 +40,9 @@ onMounted(() => { previousOverflow = document.documentElement.style.overflow; do
 onBeforeUnmount(() => { generation++; resize?.disconnect(); document.documentElement.style.overflow = previousOverflow; window.removeEventListener('resize', position); video.value?.pause(); video.value?.removeAttribute('src'); video.value?.load(); document.removeEventListener('keydown', key, true); });
 </script>
 <template>
-  <section data-slot="contest-replay" class="fixed inset-y-0 right-0 left-0 z-10 flex min-w-0 flex-col bg-black text-white md:left-(--sidebar-offset)" aria-label="回放">
+  <section data-slot="contest-replay" class="fixed inset-y-0 right-0 z-10 flex min-w-0 flex-col bg-black text-white" :style="{ left: `${contentLeft}px` }" aria-label="回放">
     <header class="flex shrink-0 items-center justify-between gap-3 px-4 py-3">
-      <h2 class="min-w-0 truncate text-sm font-medium">{{ title }} · {{ '回放' }}</h2>
+      <h2 class="min-w-0 truncate text-sm font-medium">{{ title }} · {{ current?.title || '回放' }}</h2>
       <Button type="button" size="icon" variant="ghost" class="shrink-0 text-white hover:bg-white/15 hover:text-white" aria-label="关闭回放" title="关闭回放（Esc）" @click="close"><X /></Button>
     </header>
     <div class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
