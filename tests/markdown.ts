@@ -70,5 +70,68 @@ console.log('\n=== markdown that also contains inline html ===');
     const entities = renderAnnouncement('<p>a &amp; b &lt; c</p>');
     check('entities survive', entities.includes('&amp;') || entities.includes('&'), entities.slice(0, 80));
 }
+console.log('\n=== Luogu editor syntax ===');
+{
+    for (const kind of ['info', 'success', 'warning', 'error']) {
+        const closed = renderAnnouncement(`:::${kind}[提示 **标题**]\n内容 $x_1$\n:::`);
+        check(`${kind} is collapsed by default`, closed.includes(`callout-${kind}"`) && !closed.includes(' open'));
+        check(`${kind} title and math render`, closed.includes('<strong>标题</strong>') && closed.includes('katex'));
+        const open = renderAnnouncement(`:::${kind}[展开]{open}\n内容\n:::`, 'markdown');
+        check(`${kind} supports open`, /<details[^>]+ open>/.test(open));
+    }
+    const nested = renderAnnouncement(':::::warning[父容器]\n\n::::success[子容器]{open}\n:::error[孙容器]{open}\n内容\n:::\n::::\n\n结束\n:::::');
+    check('three nested callouts render', (nested.match(/<details/g) ?? []).length === 3 && !nested.includes(':::'));
+    const align = renderAnnouncement('::::align{right}\n## 右侧\n\n:::align{center}\n居中\n:::\n\n右侧\n::::');
+    check('alignment directives nest', align.includes('markdown-align-right') && align.includes('markdown-align-center') && align.includes('<h2>右侧</h2>'));
+    const epigraph = renderAnnouncement(':::epigraph[——**otto**]\n大家好啊。\n:::');
+    check('epigraph renders attribution', epigraph.includes('markdown-epigraph') && epigraph.includes('<figcaption>——<strong>otto</strong></figcaption>'));
+    const linkedTitle = renderAnnouncement(':::info[查看 [帮助](https://example.com)]\n内容\n:::', 'markdown');
+    check('links in directive titles', linkedTitle.includes('<summary>查看 <a href="https://example.com">帮助</a></summary>'));
+    const table = '| A | B | C |\n| :-: | --: | --- |\n| a | < | x |\n| ^ | ^ | y |\n| ^ | ^ | z |';
+    const merged = renderAnnouncement(table, 'markdown');
+    check('rectangular colspan and rowspan', merged.includes('rowspan="3" colspan="2"') && !merged.includes('>^<'));
+    check('table alignment preserved', merged.includes('text-align:center') && merged.includes('text-align:right'));
+    const malformed = renderAnnouncement('|1|2|3|4|5|\n|:-:|:-:|:-:|:-:|:-:|\n|a|<|<|^|<|\n|^|a|<|^|<|\n|^|>|a|^|<|\n|<|<|<|a|<|', 'markdown');
+    check('malformed merge markers do not throw', malformed.includes('<table') && malformed.includes('colspan="3"'));
+    for (const style of ['three', 'tuack', 'tuack=2']) {
+        const styled = renderAnnouncement(`::cute-table{${style}}\n\n${table}\n\n后续段落`, 'markdown');
+        check(`cute-table ${style}`, styled.includes(`cute-table-${style.split('=')[0]}`) && !styled.includes('::cute-table') && styled.includes('后续段落'));
+        if (style.includes('=')) check('tuack divider position', styled.includes('class="table-divider"'));
+    }
+    const isolated = renderAnnouncement(`::cute-table{three}\n\n${table}\n\n${table}`, 'markdown');
+    check('table directive affects only next table', (isolated.match(/cute-table-three/g) ?? []).length === 1 && (isolated.match(/<table/g) ?? []).length === 2);
+    const unknown = renderAnnouncement(':::unknown[保留]\n内容\n:::', 'markdown');
+    check('unknown directives stay readable', unknown.includes(':::unknown') && unknown.includes('内容'), unknown);
+    const unclosed = renderAnnouncement(':::info[未闭合]\n内容', 'markdown');
+    check('unclosed directive stays readable', unclosed.includes(':::info') && unclosed.includes('内容'), unclosed);
+}
+console.log('\n=== Code fences ===');
+{
+    const code = renderAnnouncement('```cpp lines=2-3,5\nint x = 1;\n/* multiline\ncomment */\n$x$\nreturn 0;\n```', 'markdown');
+    check('Prism syntax highlighting', code.includes('token keyword'));
+    check('code line numbers', code.includes('data-line="5"'));
+    check('specified code lines highlighted', (code.match(/class="code-line code-line-highlight"/g) ?? []).length === 3);
+    check('math inside code stays literal', code.includes('$x$') && !code.includes('katex'));
+    const tilde = renderAnnouncement('~~~py\nprint("$x$")\n~~~');
+    check('tilde fences and Python alias', tilde.includes('language-py') && tilde.includes('token string') && !tilde.includes('katex'));
+    const long = renderAnnouncement('````plain\n```\n:::info[test]\n$x$\n:::join\n````', 'markdown');
+    check('long fences protect directives and math', !long.includes('<details') && !long.includes('katex') && long.includes(':::info'));
+    const inline = renderAnnouncement('``$x$ `literal` ``', 'markdown');
+    check('multi-backtick code spans protect math', inline.includes('<code>$x$ `literal` </code>') && !inline.includes('katex'));
+    const autoInline = renderAnnouncement('公式源码 `$x_1$`');
+    check('auto mode still renders inline code', autoInline.includes('<code>$x_1$</code>') && !autoInline.includes('katex'));
+    const nested = renderAnnouncement(':::info[code]{open}\n```plain\n:::\n```\n末尾\n:::', 'markdown');
+    check('closing directive inside code is literal', nested.includes('data-line="1">:::') && nested.includes('末尾') && nested.includes('</details>'));
+    for (const language of ['plain', 'unknown', 'constructor', '__proto__']) {
+        const plain = renderAnnouncement(`\`\`\`${language}\n<script>$x$</script>\n\`\`\``, 'markdown');
+        check(`safe fallback for ${language}`, /&lt;script(?:&gt;|>)/.test(plain) && !plain.includes('token ') && !plain.includes('katex'), plain);
+    }
+    const auto = renderAnnouncement('```cpp\n#include <bits/stdc++.h>\n```');
+    check('auto mode escapes code HTML', /&lt;bits\/stdc\+\+\.h(?:&gt;|>)/.test(auto) && !auto.includes('<bits'), auto);
+    const htmlCode = renderAnnouncement('```html\n<p>$x$</p>\n```');
+    check('code HTML does not interfere with auto detection', htmlCode.includes('<pre><code') && !htmlCode.includes('katex'));
+    const blankLine = renderAnnouncement('```plain\na\n\n```', 'markdown');
+    check('trailing blank code lines preserved', blankLine.includes('data-line="2"'));
+}
 console.log(`\n${failures === 0 ? 'ALL MARKDOWN CHECKS PASSED' : `${failures} MARKDOWN CHECK(S) FAILED`}\n`);
 process.exit(failures === 0 ? 0 : 1);

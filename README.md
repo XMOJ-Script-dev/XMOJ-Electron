@@ -65,6 +65,19 @@ src/
 
 另；XMOJ Electron 中加入了缓存功能，部分页面可在离线页面下使用缓存加载。
 
+### Markdown 扩展
+
+公告、题面及讨论的 Markdown 渲染支持 [洛谷编辑器帮助手册](https://www.luogu.com.cn/article/70w8j2pj) 中的排版语法：
+
+- `:::info[标题]`、`:::success[标题]`、`:::warning[标题]`、`:::error[标题]`：可折叠提示框，标题后加 `{open}` 默认展开。
+- `:::align{left}` / `{center}` / `{right}`：段落与标题对齐；`:::epigraph[——作者]`：题记。
+- 容器以独立一行的 `:::` 结束，支持嵌套；父容器冒号数量须多于子容器（例如外层 `::::`、内层 `:::`）。
+- 表格单元格使用 `<` 向左合并、`^` 向上合并；不合法的合并标记保留为文本。
+- 表格前单独一行写 `::cute-table{three}` 或 `::cute-table{tuack}`，分别启用三线表或 Tuack 风格；`::cute-table{tuack=3}` 加粗第 3 列之后的竖线。
+- 反引号或波浪线代码围栏支持语法高亮与行号，例如围栏信息 `cpp lines=2-3,5` 高亮第 2、3、5 行。未指定语言时使用 C++，`plain` 或未知语言按纯文本显示。内置 C/C++、Python、Java、JavaScript/TypeScript、Bash、JSON、HTML/CSS 高亮。
+
+保留 GFM 表格、任务列表及 KaTeX 公式支持；代码中的公式和容器标记不参与渲染，最终 HTML 仍经过 DOMPurify 消毒。
+
 ## 开发
 
 ```bash
@@ -111,6 +124,7 @@ npm run test:cloud-settings # 云同步的**线格式**：`Settings` 必须是 J
                             # 且读取时会解析回对象（用本地 stub 后端，不碰真实账号）
 npm run test:codecheck # 提交前代码检查（文件 IO / 拼写 / 括号 / 头文件）
 npm run test:markdown # 公告 Markdown + KaTeX 渲染（含公式/货币等边界情形）
+npm run test:markdown-dom # Electron 中验证扩展语法的交互、布局及真实 HTML 消毒
 npm run test:smoke    # 主进程层联调：真实请求 xmoj.tech，覆盖 cookie 作用域、
                       # 会话持久化、解析，以及一次故意失败的登录
 npm run test:live     # 真实登录（需要 tests/account.txt），校验登录后的题库、

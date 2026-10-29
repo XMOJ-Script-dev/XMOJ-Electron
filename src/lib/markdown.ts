@@ -1,7 +1,6 @@
 import DOMPurify from 'dompurify';
 import katex from 'katex';
-import { marked } from 'marked';
-marked.setOptions({ gfm: true, breaks: true });
+import { markdown } from './markdown-extensions.ts';
 const PLACEHOLDER = '\u0000MATH';
 export function renderMath(tex: string, displayMode: boolean): string {
     try {
@@ -45,6 +44,10 @@ export function sanitize(html: string): string {
     });
 }
 function looksLikeMarkdown(source: string): boolean {
+    if (/`+[^`\n]+`+/.test(source))
+        return true;
+    if (/(^|\n)\s{0,3}(?:~{3,}|`{3,}|:{2,}[a-z])/.test(source))
+        return true;
     if (/(^|\n)\s{0,3}#{1,6}\s/.test(source))
         return true;
     if (/(^|\n)\s{0,3}([-*+]|\d+\.)\s+/.test(source))
@@ -59,37 +62,25 @@ function looksLikeMarkdown(source: string): boolean {
         return true;
     return false;
 }
-const TAG_PATTERN = /<\/?[a-z][^<>]*>/gi;
-function shieldHtml(source: string, store: string[]): string {
-    return source.replace(TAG_PATTERN, (tag) => {
-        store.push(tag);
-        return `\u0000HTML${store.length - 1}\u0000`;
-    });
-}
 export function renderAnnouncement(source: string, mode: 'auto' | 'markdown' = 'auto'): string {
     if (!source.trim())
         return '';
     const code: string[] = [];
-    const protectedSource = source.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>|<code\b[^>]*>[\s\S]*?<\/code>|```[^\n]*\n[\s\S]*?```|`[^`\n]+`/gi, block => {
-        const html = block.startsWith('<') ? block : block.startsWith('```') ? marked.parse(block, { async: false }) as string : marked.parseInline(block, { async: false }) as string;
-        code.push(html);
+    const protectedSource = source.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>|<code\b[^>]*>[\s\S]*?<\/code>|^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[~`]*[ \t]*(?=\n|$)|(?![\s\S]))|(`+)[\s\S]*?\2/gim, block => {
+        code.push(block);
         return `\u0000CODE${code.length - 1}\u0000`;
     });
     const math: string[] = [];
-    const withoutMath = extractMath(protectedSource, math);
+    const withoutMath = extractMath(protectedSource, math).replace(/\u0000CODE(\d+)\u0000/g, (_, index: string) => code[Number(index)] ?? '');
     let html: string;
     if (mode === 'markdown') {
-        html = marked.parse(withoutMath, { async: false }) as string;
+        html = markdown.parse(withoutMath, { async: false }) as string;
     }
-    else if (looksLikeMarkdown(withoutMath) && !/<(?:p|table|ul|ol|pre)\b/i.test(withoutMath)) {
-        const tags: string[] = [];
-        const shielded = shieldHtml(withoutMath, tags);
-        const parsed = marked.parse(shielded, { async: false }) as string;
-        html = parsed.replace(/\u0000HTML(\d+)\u0000/g, (_m, index: string) => tags[Number(index)] ?? '');
+    else if (looksLikeMarkdown(withoutMath) && !/<(?:p|table|ul|ol|pre)\b/i.test(protectedSource)) {
+        html = markdown.parse(withoutMath, { async: false }) as string;
     }
     else {
         html = withoutMath;
     }
-    html = html.replace(/<p>\s*\u0000CODE(\d+)\u0000\s*<\/p>/g, (match, index: string) => /^<pre\b/i.test(code[Number(index)] ?? '') ? code[Number(index)] : match);
-    return sanitize(restoreMath(html, math).replace(/\u0000CODE(\d+)\u0000/g, (_, index: string) => code[Number(index)] ?? ''));
+    return sanitize(restoreMath(html, math));
 }

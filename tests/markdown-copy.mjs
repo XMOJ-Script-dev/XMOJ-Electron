@@ -34,6 +34,21 @@ try {
         return {plain,shift,ime,repeat,disabled,input:inputKey.defaultPrevented,count};
     })()`);
     assert.deepEqual(enter, { plain: true, shift: false, ime: false, repeat: false, disabled: true, input: true, count: 2 });
+    const markdownEnter = await win.webContents.executeJavaScript(`(() => {
+        ${enterSource};
+        const form=document.createElement('form'), textarea=document.createElement('textarea'), button=document.createElement('button');
+        textarea.dataset.enterSubmit='ctrl'; button.type='submit'; form.append(textarea,button); document.body.append(form);
+        let count=0; form.addEventListener('submit',e=>{e.preventDefault();count++});
+        document.addEventListener('keydown',submitOnEnter);
+        const key=options=>{const event=new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true,...options});textarea.dispatchEvent(event);return event.defaultPrevented};
+        const plain=key({}), ctrl=key({ctrlKey:true}), shift=key({shiftKey:true}), ime=key({ctrlKey:true,isComposing:true}), legacyIme=key({ctrlKey:true,keyCode:229}), repeat=key({ctrlKey:true,repeat:true}), alt=key({ctrlKey:true,altKey:true}), meta=key({metaKey:true}), ctrlShift=key({ctrlKey:true,shiftKey:true});
+        button.disabled=true; const disabled=key({ctrlKey:true});
+        button.disabled=false; textarea.readOnly=true; const readOnly=key({ctrlKey:true});
+        textarea.readOnly=false; textarea.disabled=true; const locked=key({ctrlKey:true});
+        document.removeEventListener('keydown',submitOnEnter); form.remove();
+        return {plain,ctrl,shift,ime,legacyIme,repeat,alt,meta,ctrlShift,disabled,readOnly,locked,count};
+    })()`);
+    assert.deepEqual(markdownEnter, { plain: false, ctrl: true, shift: false, ime: false, legacyIme: false, repeat: false, alt: false, meta: false, ctrlShift: false, disabled: true, readOnly: false, locked: false, count: 1 });
     console.log('Markdown copy DOM regressions passed (paragraphs, tabs, code, links, tables, lists).');
     app.exit(0);
 } catch (error) {

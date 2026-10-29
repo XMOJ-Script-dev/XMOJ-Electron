@@ -319,7 +319,7 @@ onMounted(async () => {
       <div class="grid gap-3 md:grid-cols-2" data-slot="markdown-composer">
         <div class="min-w-0 space-y-2">
           <h3 class="text-sm font-medium">Markdown 编辑</h3>
-          <textarea v-model="newContent" rows="8" placeholder="内容（Shift+Enter 换行）" class="min-h-48 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm" :disabled="submitting" />
+          <textarea v-model="newContent" rows="8" data-enter-submit="ctrl" placeholder="内容（Enter 换行，Ctrl+Enter 发布）" class="min-h-48 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm" :disabled="submitting" />
         </div>
         <div class="min-w-0 space-y-2">
           <h3 class="text-sm font-medium">实时预览</h3>
@@ -434,7 +434,7 @@ onMounted(async () => {
       <form v-if="editing !== null" data-slot="discussion-edit-form" class="space-y-3 rounded-xl border p-4" @submit.prevent="mutate('editReply', editing)">
         <h3 class="font-medium">编辑内容</h3>
         <div class="grid gap-3 md:grid-cols-2">
-          <textarea ref="editEditor" v-model="editContent" rows="8" class="w-full rounded-md border p-3 font-mono text-sm" :disabled="mutating" aria-label="编辑 Markdown" />
+          <textarea ref="editEditor" v-model="editContent" rows="8" data-enter-submit="ctrl" placeholder="Enter 换行，Ctrl+Enter 保存修改" class="w-full rounded-md border p-3 font-mono text-sm" :disabled="mutating" aria-label="编辑 Markdown" />
           <AnnouncementBody class="overflow-auto rounded-md border p-3 text-sm" :source="editContent" format="markdown" />
         </div>
         <div class="flex gap-2"><Button type="submit" :disabled="mutating || !editContent.trim()">保存修改</Button><Button type="button" variant="outline" :disabled="mutating" @click="editing = null">取消</Button></div>
@@ -497,7 +497,7 @@ onMounted(async () => {
         <div class="grid gap-3 md:grid-cols-2" data-slot="markdown-composer">
           <div class="min-w-0 space-y-2">
             <h3 class="text-sm font-medium">Markdown 编辑</h3>
-            <textarea ref="editor" v-model="replyContent" rows="8" placeholder="写下你的回复（Shift+Enter 换行）" class="min-h-48 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm" :disabled="submitting || locked" />
+            <textarea ref="editor" v-model="replyContent" rows="8" data-enter-submit="ctrl" placeholder="写下你的回复（Enter 换行，Ctrl+Enter 发送）" class="min-h-48 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm" :disabled="submitting || locked" />
           </div>
           <div class="min-w-0 space-y-2">
             <h3 class="text-sm font-medium">实时预览</h3>

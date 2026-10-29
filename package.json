@@ -21,6 +21,7 @@
     "test:native-views": "node --experimental-strip-types --loader ./tests/loader.mjs tests/native-views.ts",
     "test:cloud-settings": "node --experimental-strip-types --loader ./tests/loader.mjs tests/community-settings.ts",
     "test:markdown": "node --experimental-strip-types --loader ./tests/loader.mjs tests/markdown.ts",
+    "test:markdown-dom": "electron tests/markdown-dom.mjs",
     "test:requested": "node --experimental-strip-types --loader ./tests/loader.mjs tests/requested-regressions.ts",
     "test:followup": "node --experimental-strip-types tests/followup.ts",
     "test:export-discussion": "node --experimental-strip-types tests/export-discussion.ts",
@@ -58,6 +59,7 @@
     "marked": "^18.1.0",
     "monaco-editor": "^0.53.0",
     "node-html-parser": "^9.0.4",
+    "prismjs": "^1.30.0",
     "reka-ui": "^2.10.1",
     "tailwind-merge": "^3.6.0",
     "vue": "^3.5.44"
@@ -65,6 +67,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
+    "@types/prismjs": "^1.26.6",
     "@vitejs/plugin-vue": "^5.0.4",
     "electron": "^43.8.3",
     "electron-builder": "^26.18.0",
