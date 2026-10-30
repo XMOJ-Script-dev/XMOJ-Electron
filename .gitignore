@@ -33,6 +33,12 @@ tests/live-login-report.txt
 # Regenerate with: npm run test:userscript -- --url=<page> --dump=tests/rendered-<page>.html
 tests/rendered-*.html
 
+# Live page dumps and audit scratch captured from xmoj.tech during verification.
+# Regenerable via tests/live-dump.ts / tests/live-dump2.ts; never commit.
+tests/live-dump/
+tests/tmp-audit-*
+tests/xmoj-script-ref/
+
 # Editor directories and files
 .vscode/*
 .idea

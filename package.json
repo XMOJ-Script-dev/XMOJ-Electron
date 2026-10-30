@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
     "test": "node --experimental-strip-types tests/validate.ts",
+    "test:bugfix": "node --experimental-strip-types --loader ./tests/loader.mjs tests/bugfix-regressions.ts",
     "test:poller": "node --experimental-strip-types tests/poller.ts",
     "test:codecheck": "node --experimental-strip-types tests/codecheck.ts",
     "test:diff": "node --experimental-strip-types tests/diff.ts",

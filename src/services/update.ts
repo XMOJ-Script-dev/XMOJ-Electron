@@ -1,4 +1,4 @@
-import { XMOJ_ORIGIN, XMOJ_SCRIPT_ORIGIN } from '@/shared/types';
+import { XMOJ_ORIGIN, XMOJ_SCRIPT_ORIGIN, type DialogButton } from '@/shared/types';
 import { showDialog } from '@/stores/dialog';
 export type UpdateStatus = 'available' | 'current' | 'unknown';
 export interface UpdateEntry {
@@ -89,8 +89,9 @@ export async function checkAppUpdate(): Promise<UpdateCheckResult> {
     const entries = [newestStable, newest]
         .filter((version, index, list) => list.indexOf(version) === index)
         .map((version) => toEntry(version, history[version]));
+    const status: UpdateStatus = compareVersions(current, newestStable) < 0 ? 'available' : 'current';
     return {
-        status: 'current',
+        status,
         current,
         latest: newestStable,
         entries,
@@ -135,18 +136,57 @@ export async function showAboutDialog(): Promise<void> {
         cancelId: 'ok',
     });
 }
+const RELEASE_PAGE_URL = 'https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases';
+function formatUpdateDate(value: number | null): string {
+    if (value === null)
+        return '';
+    const ms = value > 1e12 ? value : value * 1000;
+    const parsed = new Date(ms);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString('zh-CN');
+}
 export async function showUpdateDialog(result: UpdateCheckResult): Promise<void> {
     const lines: string[] = [];
-    lines.push(`版本：${result.current}`, '');
-    lines.push(`还没有版本更新功能哦`, '');
-    await showDialog({
-        title: '检查更新',
-        message: result.status === 'unknown' ? '检查更新失败' : '版本信息',
-        detail: lines.join('\n').trim(),
-        buttons: [
+    let message: string;
+    let buttons: DialogButton[];
+    let releaseUrl: string | null = null;
+    if (result.status === 'unknown') {
+        message = '检查更新失败';
+        lines.push(result.message ?? '无法获取更新信息');
+        buttons = [{ id: 'close', label: '关闭' }];
+    }
+    else if (result.status === 'available' && result.latest) {
+        message = `发现新版本 ${result.latest}（当前版本 ${result.current}）`;
+        releaseUrl = RELEASE_PAGE_URL;
+        lines.push(`最新版本：${result.latest}`, `当前版本：${result.current}`, '');
+        for (const entry of result.entries) {
+            const date = formatUpdateDate(entry.date);
+            lines.push(`${entry.prerelease ? '预览版' : '正式版'} ${entry.version}${date ? `（${date}）` : ''}`);
+            for (const item of entry.items) {
+                if (item.description)
+                    lines.push(`  - ${item.title ? `${item.title} ` : ''}${item.description}`);
+            }
+            if (entry.notes)
+                lines.push(`  备注：${entry.notes}`);
+            lines.push('');
+        }
+        buttons = [
+            { id: 'release', label: '前往发布页' },
             { id: 'close', label: '关闭' },
-        ],
-        defaultId: 'close',
+        ];
+    }
+    else {
+        message = '已是最新版本';
+        lines.push(`当前版本：${result.current}`, `最新版本：${result.latest ?? '未知'}`);
+        buttons = [{ id: 'close', label: '关闭' }];
+    }
+    const choice = await showDialog({
+        title: '检查更新',
+        message,
+        detail: lines.join('\n').trim(),
+        buttons,
+        defaultId: buttons[0].id,
         cancelId: 'close',
     });
+    if (choice.buttonId === 'release' && releaseUrl)
+        await window.xmoj.app.openLink(releaseUrl).catch(() => undefined);
 }

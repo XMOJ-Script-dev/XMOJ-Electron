@@ -239,7 +239,7 @@ export function parseCountdown(html: string, today = new Date()): HomeCountdown[
             continue;
         result.push({ event, date, days });
     }
-    return result.sort((a, b) => a.days - b.days);
+    return result;
 }
 function scoreProblemTable(table: HTMLElement): number {
     const rows = table.querySelectorAll('tbody tr').length > 0
@@ -328,7 +328,7 @@ export function parseProblemsetPage(html: string, requestedPage = 1): Problemset
             title = normaliseText(cells[2].textContent);
         if (!title)
             title = `题目 ${id}`;
-        title = title.replace(/^\s*\d+\s*[-–—:.]?\s*/, '').trim() || `题目 ${id}`;
+        title = title.replace(/^\s*\d+\s*[-–—:.]\s*/, '').trim() || `题目 ${id}`;
         const statusEl = row.querySelector('div.status, .status');
         const statusClasses = statusEl?.classList ? Array.from(statusEl.classList.value) : [];
         const solved = statusClasses.includes('status_y')
@@ -382,6 +382,7 @@ const JUDGE_RESULTS: Record<number, {
     0: { label: 'Waiting', verdict: 'pending' },
     1: { label: 'Pending', verdict: 'pending' },
     2: { label: 'Compiling', verdict: 'pending' },
+    3: { label: 'Running', verdict: 'pending' },
     4: { label: 'Accepted', verdict: 'accepted' },
     5: { label: 'Presentation Error', verdict: 'presentation_error' },
     6: { label: 'Wrong Answer', verdict: 'wrong_answer' },
@@ -647,6 +648,10 @@ export function parseStatusPage(html: string): StatusPage {
                 if (parseMemoryKb(value) !== null || parseTimeMs(value) !== null)
                     continue;
                 if (matchLanguage(value))
+                    continue;
+                if (/^[a-z]+$/.test(value))
+                    continue;
+                if (value.startsWith('-'))
                     continue;
                 userRating = value;
                 break;

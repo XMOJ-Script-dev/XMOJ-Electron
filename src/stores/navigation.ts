@@ -23,13 +23,15 @@ export const VIEWS: ViewMeta[] = [
 ];
 const currentView = ref<ViewId>('home');
 const activeProblemId = ref(0);
+const activeContest = ref<{ contestId: number; contestPid: number } | null>(null);
 const activeThread = ref<{ postId: number; page: number } | null>(null);
 export function useNavigation() {
     function navigate(id: ViewId): void {
         currentView.value = id;
     }
-    function submitProblem(problemId: number): void {
+    function submitProblem(problemId: number, contest?: { contestId: number; contestPid: number } | null): void {
         activeProblemId.value = problemId;
+        activeContest.value = contest ?? null;
         currentView.value = 'submit';
     }
     function viewProblem(problemId: number): void {
@@ -39,6 +41,7 @@ export function useNavigation() {
     return {
         currentView,
         activeProblemId,
+        activeContest,
         activeThread,
         viewThread(postId: number, page = 1) {
             activeThread.value = { postId, page };

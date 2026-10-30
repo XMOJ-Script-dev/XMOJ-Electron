@@ -847,6 +847,18 @@ function registerIpc(): void {
         const input = (payload ?? {}) as Record<string, unknown>;
         return withCommunity((api, c) => api.sendMail(c, asString(input.toUser), asString(input.content)));
     });
+    handle(IPC.mailReadMention, (payload) => {
+        const input = (payload ?? {}) as Record<string, unknown>;
+        const mentionId = Number(input.mentionId);
+        if (!Number.isSafeInteger(mentionId) || mentionId <= 0) throw new Error('无效的私信通知编号');
+        return withCommunity((api, c) => api.readMailMention(c, mentionId));
+    });
+    handle(IPC.bbsReadMention, (payload) => {
+        const input = (payload ?? {}) as Record<string, unknown>;
+        const mentionId = Number(input.mentionId);
+        if (!Number.isSafeInteger(mentionId) || mentionId <= 0) throw new Error('无效的讨论通知编号');
+        return withCommunity((api, c) => api.readBbsMention(c, mentionId));
+    });
     const pollNotices = createNoticePoller((channel, credentials) => withCommunity(async (api, c) => {
         if (credentials.sessionId !== c.sessionId || credentials.username !== c.username) return [];
         const notices: CommunityNotification[] = [];
