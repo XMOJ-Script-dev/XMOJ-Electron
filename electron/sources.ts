@@ -78,9 +78,12 @@ export async function fetchSource(http: HttpClient, solutionId: number): Promise
     const response = await http.get(`${XMOJ_ORIGIN}/getsource.php?id=${solutionId}`);
     if (response.status !== 200)
         return null;
-    const text = response.body.replace(/^\s*<!--\s*not[- ]cached\s*-->\s*\r?\n?/i, '').replace(/\r?\n?<!--\s*not[- ]cached\s*-->\s*$/i, '');
+    let text = response.body.replace(/^\s*<!--\s*not[- ]cached\s*-->\s*\r?\n?/i, '').replace(/\r?\n?<!--\s*not[- ]cached\s*-->\s*$/i, '');
     if (/<html|<body|<!DOCTYPE/i.test(text))
         return null;
+    const banner = /\r?\n[ \t]*\/\*{6,}[\s\S]*\*\/[ \t]*\r?\n?$/.exec(text) ?? /^[ \t]*\/\*{6,}[\s\S]*\*\/[ \t]*\r?\n?$/.exec(text);
+    if (banner)
+        text = text.slice(0, banner.index).trimEnd();
     return text;
 }
 export function extensionForLanguage(language: string): string {
