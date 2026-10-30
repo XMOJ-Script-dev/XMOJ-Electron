@@ -253,6 +253,8 @@ console.log('\n=== ⑥ fetchSource：尾部 /****** 注释块与 <!--not cached-
     check('两种标记叠加剥离', both === 'int main() {}', JSON.stringify(both));
     const untouched = await fetchSource(client('#include <bits/stdc++.h>\n/* normal comment */\nint main() { return 0; }'), 8);
     check('普通代码完全不动', untouched === '#include <bits/stdc++.h>\n/* normal comment */\nint main() { return 0; }', JSON.stringify(untouched));
+    const sectionThenBanner = await fetchSource(client('int a = 1;\n\n/****** SECTION 2 ******/\nint b = 2;\n\n' + banner), 11);
+    check('分节注释 + 尾部 banner：中间代码保留且 banner 剥离', sectionThenBanner === 'int a = 1;\n\n/****** SECTION 2 ******/\nint b = 2;', JSON.stringify(sectionThenBanner));
     check('HTML 响应 -> null', await fetchSource(client('<html><body>hidden</body></html>'), 9) === null);
     check('非 200 -> null', await fetchSource(client('', 403), 10) === null);
 }

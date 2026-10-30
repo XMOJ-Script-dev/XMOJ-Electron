@@ -21,7 +21,7 @@ function isAcceptedRankColor(raw: string): boolean {
     if (!rgb)
         return false;
     const [r, g, b] = rgb;
-    return g === 255 && g > r && g > b || (r === 170 && g === 170 && b === 255);
+    return (g === 255 && g > r && g > b) || (r === 170 && g === 170 && b === 255);
 }
 export function parseContestRank(html: string, contestId: number, oi: boolean): ContestRank {
     const root = parse(html);

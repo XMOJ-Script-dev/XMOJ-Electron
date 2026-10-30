@@ -81,7 +81,7 @@ export async function fetchSource(http: HttpClient, solutionId: number): Promise
     let text = response.body.replace(/^\s*<!--\s*not[- ]cached\s*-->\s*\r?\n?/i, '').replace(/\r?\n?<!--\s*not[- ]cached\s*-->\s*$/i, '');
     if (/<html|<body|<!DOCTYPE/i.test(text))
         return null;
-    const banner = /\r?\n[ \t]*\/\*{6,}[\s\S]*\*\/[ \t]*\r?\n?$/.exec(text) ?? /^[ \t]*\/\*{6,}[\s\S]*\*\/[ \t]*\r?\n?$/.exec(text);
+    const banner = /\r?\n[ \t]*\/\*{6,}(?:(?!\*\/)[\s\S])*\*\/[ \t]*\r?\n?$/.exec(text) ?? /^[ \t]*\/\*{6,}(?:(?!\*\/)[\s\S])*\*\/[ \t]*\r?\n?$/.exec(text);
     if (banner)
         text = text.slice(0, banner.index).trimEnd();
     return text;

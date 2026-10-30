@@ -393,6 +393,10 @@ const JUDGE_RESULTS: Record<number, {
     11: { label: 'Compile Error', verdict: 'compile_error' },
 };
 export const JUDGE_PENDING_THRESHOLD = 4;
+const JUDGER_NAMES = new Set(['saturn', 'hustoj', 'jupiter', 'mars', 'judge']);
+function isJudgerName(value: string): boolean {
+    return JUDGER_NAMES.has(value.toLowerCase());
+}
 const VERDICT_LABEL_CODES: [
     RegExp,
     number
@@ -636,7 +640,7 @@ export function parseStatusPage(html: string): StatusPage {
                 break;
             }
         }
-        let userRating: string | null = null;
+                let userRating: string | null = null;
         const stampIndex = cellText.indexOf(submittedAt);
         if (stampIndex !== -1) {
             for (let i = stampIndex + 1; i < cellText.length; i++) {
@@ -649,7 +653,7 @@ export function parseStatusPage(html: string): StatusPage {
                     continue;
                 if (matchLanguage(value))
                     continue;
-                if (/^[a-z]+$/.test(value))
+                if (isJudgerName(value))
                     continue;
                 if (value.startsWith('-'))
                     continue;

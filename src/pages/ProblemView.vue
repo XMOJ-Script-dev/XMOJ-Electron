@@ -55,7 +55,6 @@ async function load(): Promise<void> {
         }
         problem.value = fresh.value;
         navigation.activeProblemId.value = id;
-        void loadStd(id);
     }
     catch (caught) {
         if (current !== request) return;
@@ -71,6 +70,7 @@ function goSubmit(): void {
 async function loadStd(id: number): Promise<void> {
     const current = ++stdRequest;
     stdLoading.value = true;
+    std.value = null;
     stdError.value = null;
     try {
         const result = (await fetchStdCode(id)) as {
@@ -95,7 +95,7 @@ async function loadStd(id: number): Promise<void> {
 }
 function openStd(): void {
     stdDialogOpen.value = true;
-    if (!std.value && !stdError.value && !stdLoading.value && problem.value)
+    if (!stdLoading.value && problem.value)
         void loadStd(problem.value.id);
 }
 watch(() => navigation.activeProblemId.value, (id) => {
