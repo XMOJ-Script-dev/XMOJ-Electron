@@ -21,10 +21,12 @@ const error = ref<string | null>(null);
 useErrorToast(error);
 const std = ref<string | null>(null);
 const stdError = ref<string | null>(null);
+const stdLoading = ref(false);
 const stdDialogOpen = ref(false);
 const statementText = computed(() => cards.value.map(card => `## ${card.title}\n\n${cardMarkdown(card)}`).join('\n\n'));
 const cards = computed(() => problem.value?.cards ?? []);
 let request = 0;
+let stdRequest = 0;
 function cardMarkdown(card: ProblemCard): string {
     const parts = card.isSamples ? card.samples.map((sample, index) =>
         `### 样例输入 #${index + 1}\n\n\`\`\`\n${sample.input}\n\`\`\`\n\n### 样例输出 #${index + 1}\n\n\`\`\`\n${sample.output}\n\`\`\``) : [];
@@ -40,6 +42,8 @@ async function load(): Promise<void> {
     loading.value = true;
     const current = ++request;
     error.value = null;
+    stdRequest += 1;
+    stdLoading.value = false;
     std.value = null;
     stdError.value = null;
     try {
@@ -65,10 +69,9 @@ function goSubmit(): void {
     navigation.submitProblem(problem.value?.id ?? Number(problemId.value));
 }
 async function loadStd(id: number): Promise<void> {
-    const current = request;
+    const current = ++stdRequest;
+    stdLoading.value = true;
     stdError.value = null;
-    std.value = null;
-    stdDialogOpen.value = false;
     try {
         const result = (await fetchStdCode(id)) as {
             Success: boolean;
@@ -77,15 +80,23 @@ async function loadStd(id: number): Promise<void> {
                 StdCode?: string;
             };
         };
-        if (current !== request) return;
+        if (current !== stdRequest) return;
         if (!result.Success)
             throw new Error(result.Message || '标程加载失败');
         std.value = result.Data?.StdCode || null;
     }
     catch (caught) {
-        if (current !== request) return;
+        if (current !== stdRequest) return;
         stdError.value = caught instanceof Error ? caught.message : String(caught);
     }
+    finally {
+        if (current === stdRequest) stdLoading.value = false;
+    }
+}
+function openStd(): void {
+    stdDialogOpen.value = true;
+    if (!std.value && !stdError.value && !stdLoading.value && problem.value)
+        void loadStd(problem.value.id);
 }
 watch(() => navigation.activeProblemId.value, (id) => {
     if (id > 0 && id !== problemId.value) {
@@ -149,7 +160,7 @@ onMounted(() => {
             <Send />
             提交代码
           </Button>
-          <Button v-if="std" size="sm" variant="outline" @click="stdDialogOpen = true">
+          <Button size="sm" variant="outline" @click="openStd">
             <BookOpen />
             查看标程
           </Button>
@@ -159,7 +170,6 @@ onMounted(() => {
             {{ isCopied('statement') ? '已复制' : '复制完整题面' }}
           </Button>
         </div>
-        <p v-if="stdError" class="mt-2 text-xs text-muted-foreground">标程：{{ stdError }}</p>
       </section>
 
       <article
@@ -236,7 +246,11 @@ onMounted(() => {
       <DialogContent class="grid max-h-[90vh] gap-3 overflow-y-auto sm:max-w-[min(72rem,92vw)]">
         <DialogTitle>标程 · #{{ problem?.id }}</DialogTitle>
         <DialogDescription class="sr-only">该题的标准程序</DialogDescription>
-        <div v-if="std" class="space-y-2">
+        <div v-if="stdLoading" class="flex justify-center py-12">
+          <Loader2 class="animate-spin" />
+        </div>
+        <p v-else-if="stdError" class="text-sm text-muted-foreground">{{ stdError }}</p>
+        <div v-else-if="std" class="space-y-2">
           <div class="flex justify-end">
             <Button variant="outline" size="sm" @click="copy(std, 'std')">
               <Check v-if="isCopied('std')" />

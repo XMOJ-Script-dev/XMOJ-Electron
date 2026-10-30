@@ -1,7 +1,6 @@
 import type { HttpClient } from '../electron/http.ts';
 import { fetchContestList, fetchContestDetail } from '../electron/judge-api.ts';
 import { buildSubmitForm, parseLanguages, parseProblemDetail } from '../electron/problems.ts';
-
 let failures = 0;
 let passed = 0;
 function check(label: string, condition: boolean, detail = '') {
@@ -14,8 +13,6 @@ function check(label: string, condition: boolean, detail = '') {
         console.log(`  [FAIL] ${label}${detail ? ` :: ${detail}` : ''}`);
     }
 }
-
-// HttpClient stub backed by synthetic JSON keyed on URL path.
 interface StubRoute {
     status?: number;
     body: string;
@@ -40,9 +37,10 @@ function jsonHttp(routes: Record<string, StubRoute>) {
             };
         },
     };
-    return http as unknown as HttpClient & { calls: string[] };
+    return http as unknown as HttpClient & {
+        calls: string[];
+    };
 }
-
 console.log('\n=== fetchContestList: createdBy -> creator 映射 ===');
 {
     const payload = {
@@ -102,7 +100,6 @@ console.log('\n=== fetchContestList: createdBy -> creator 映射 ===');
     check('坏 JSON：ok=false', res.ok === false, String(res.ok));
     check('坏 JSON：解析失败文案', res.error === '响应解析失败', JSON.stringify(res.error));
 }
-
 console.log('\n=== fetchContestDetail: contest.creator 映射 + problems 规整 ===');
 {
     const payload = {
@@ -161,7 +158,14 @@ console.log('\n=== fetchContestDetail: contest.creator 映射 + problems 规整 
     check('可选字段默认值：submitUrl null', res.data?.submitUrl === null, JSON.stringify(res.data?.submitUrl));
     check('problems 缺失容错为空数组', Array.isArray(res.data?.problems) && res.data!.problems.length === 0, JSON.stringify(res.data?.problems));
 }
-
+console.log('\n=== fetchContestDetail: contest 字段缺失守卫 ===');
+{
+    const http = jsonHttp({ '/api/contest/6/A': { body: JSON.stringify({ problems: [] }) } });
+    const res = await fetchContestDetail(http, 6);
+    check('contest 缺失返回 ok:false', res.ok === false, String(res.ok));
+    check('contest 缺失返回错误信息', typeof res.error === 'string' && res.error.length > 0, String(res.error));
+    check('contest 缺失 data 为 null', res.data === null, JSON.stringify(res.data));
+}
 console.log('\n=== buildSubmitForm：字段名与网站表单一致 ===');
 {
     const form = buildSubmitForm({ problemId: 999, contestId: 10786, contestPid: 1000, languageId: 1, source: 'int main(){}', enableO2: false });
@@ -179,7 +183,6 @@ console.log('\n=== buildSubmitForm：字段名与网站表单一致 ===');
     check('勾选 O2 发送 enable_O2=on', form.enable_O2 === 'on', JSON.stringify(form.enable_O2));
 }
 {
-    // 比赛参数不完整时回退普通提交
     const form = buildSubmitForm({ problemId: 1000, contestId: 10786, languageId: 1, source: 'x', enableO2: false });
     check('仅 contestId 无 contestPid 时回退 id', form.id === '1000' && !('cid' in form), JSON.stringify(form));
     const form2 = buildSubmitForm({ problemId: 1000, contestPid: 1, languageId: 1, source: 'x', enableO2: false });
@@ -189,7 +192,6 @@ console.log('\n=== buildSubmitForm：字段名与网站表单一致 ===');
     const form = buildSubmitForm({ problemId: 1, languageId: 0, source: '', enableO2: false });
     check('字段集合精确为 {language, source, id}', JSON.stringify(Object.keys(form).sort()) === JSON.stringify(['id', 'language', 'source']), JSON.stringify(Object.keys(form).sort()));
 }
-
 console.log('\n=== parseLanguages：#language 下拉解析 ===');
 {
     const html = `<html><body><select id="language" name="language">
@@ -214,7 +216,6 @@ console.log('\n=== parseLanguages：#language 下拉解析 ===');
     const idWins = parseLanguages('<html><body><select id="language" name="language"><option value="1">A</option></select><select name="language"><option value="2">B</option></select></body></html>');
     check('#language 优先于 name="language"', idWins.length === 1 && idWins[0]?.id === 1, JSON.stringify(idWins));
 }
-
 console.log('\n=== assembleStatement（经 parseProblemDetail 锁定文档化行为） ===');
 {
     const html = `<html><body>
@@ -241,6 +242,5 @@ console.log('\n=== assembleStatement（经 parseProblemDetail 锁定文档化行
     check('样例卡片保留标题但正文不含样例', detail.statementHtml.includes('<h3>样例</h3>'), JSON.stringify(detail.statementHtml));
     check('多张卡片以换行拼接', detail.statementHtml.includes('\n') && detail.statementHtml.indexOf('。\n<h3>样例</h3>') !== -1, JSON.stringify(detail.statementHtml));
 }
-
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`} (pass=${passed}, fail=${failures})\n`);
 process.exit(failures === 0 ? 0 : 1);

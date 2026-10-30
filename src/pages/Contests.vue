@@ -112,7 +112,7 @@ function submitProblem(problem: ContestProblemSummary): void {
     const current = detail.value;
     if (!current || problem.problemId === null)
         return;
-    const index = problem.num.toUpperCase().charCodeAt(0) - 65;
+    const index = current.problems.indexOf(problem);
     if (index < 0)
         return;
     navigation.submitProblem(problem.problemId, {

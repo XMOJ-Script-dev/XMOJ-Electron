@@ -33,21 +33,26 @@ interface UpdateManifest {
     UpdateHistory?: RawUpdateHistory;
 }
 function compareVersions(a: string, b: string): number {
-    const parse = (value: string) => String(value ?? '')
-        .trim()
-        .replace(/^v/i, '')
-        .split(/[.\-+]/)
-        .map((part) => Number.parseInt(part, 10))
-        .map((n) => (Number.isFinite(n) ? n : 0));
+    const parse = (value: string) => {
+        const cleaned = String(value ?? '').trim().replace(/^v/i, '');
+        const match = cleaned.match(/^(.*?)(?:-(.+))?$/);
+        const numbers = (match?.[1] ?? '')
+            .split(/[.+]/)
+            .map((part) => Number.parseInt(part, 10))
+            .map((n) => (Number.isFinite(n) ? n : 0));
+        return { numbers, prerelease: Boolean(match?.[2]) };
+    };
     const left = parse(a);
     const right = parse(b);
-    const length = Math.max(left.length, right.length);
+    const length = Math.max(left.numbers.length, right.numbers.length);
     for (let i = 0; i < length; i++) {
-        const l = left[i] ?? 0;
-        const r = right[i] ?? 0;
+        const l = left.numbers[i] ?? 0;
+        const r = right.numbers[i] ?? 0;
         if (l !== r)
             return l > r ? 1 : -1;
     }
+    if (left.prerelease !== right.prerelease)
+        return left.prerelease ? -1 : 1;
     return 0;
 }
 function toEntry(version: string, raw: RawUpdateHistory[string]): UpdateEntry {
@@ -184,7 +189,7 @@ export async function showUpdateDialog(result: UpdateCheckResult): Promise<void>
         message,
         detail: lines.join('\n').trim(),
         buttons,
-        defaultId: buttons[0].id,
+        defaultId: 'close',
         cancelId: 'close',
     });
     if (choice.buttonId === 'release' && releaseUrl)

@@ -1,10 +1,3 @@
-// Store state-machine tests: navigation / mail-target / panel / dialog / preferences.
-// Run: node --experimental-strip-types --loader ./tests/loader-stores.mjs tests/stores.ts
-//
-// All data is inline-synthetic; the only "environment" faked here is the minimal
-// DOM surface (window.matchMedia / documentElement / localStorage) that
-// preferences.ts touches at module scope.
-
 let failures = 0;
 let passes = 0;
 function check(label: string, condition: boolean, detail = '') {
@@ -15,8 +8,6 @@ function check(label: string, condition: boolean, detail = '') {
     const status = condition ? 'PASS' : 'FAIL';
     console.log(`  [${status}] ${label}${condition ? '' : ` :: ${detail}`}`);
 }
-
-// ---------- minimal DOM environment for src/stores/preferences.ts ----------
 const g = globalThis as Record<string, any>;
 const mediaListeners: Array<() => void> = [];
 let mediaMatches = false;
@@ -24,7 +15,6 @@ const rootClasses = new Set<string>();
 const rootStyle: Record<string, string> = {};
 const rootDataset: Record<string, string> = {};
 const storageMap = new Map<string, string>();
-
 g.localStorage = {
     getItem: (key: string) => (storageMap.has(key) ? storageMap.get(key)! : null),
     setItem: (key: string, value: string) => void storageMap.set(key, String(value)),
@@ -59,15 +49,11 @@ g.document = {
     },
 };
 const KEY = 'xmoj.preferences.v1';
-
-// ---------- imports (after globals; stores import the stubbed 'vue') ----------
 const navigation = await import('../src/stores/navigation.ts');
 const mailTarget = await import('../src/stores/mail-target.ts');
 const panel = await import('../src/stores/panel.ts');
 const dialog = await import('../src/stores/dialog.ts');
 const prefs = await import('../src/stores/preferences.ts');
-
-// ============================ navigation ============================
 console.log('\n=== navigation: view switching ===');
 {
     const a = navigation.useNavigation();
@@ -86,9 +72,14 @@ console.log('\n=== navigation: viewProblem / activeProblem semantics ===');
     nav.viewProblem(1000);
     check('viewProblem sets activeProblemId', nav.activeProblemId.value === 1000, String(nav.activeProblemId.value));
     check('viewProblem switches to problem view', nav.currentView.value === 'problem', String(nav.currentView.value));
-    check('viewProblem does not touch contest context', nav.activeContest.value === null);
-    nav.navigate('home');
-    check('activeProblemId persists across unrelated navigation', nav.activeProblemId.value === 1000, String(nav.activeProblemId.value));
+    nav.submitProblem(1001, { contestId: 10786, contestPid: 2 });
+    check('contest context present before viewProblem', nav.activeContest.value !== null);
+    nav.viewProblem(1000);
+    check('viewProblem clears contest context', nav.activeContest.value === null, JSON.stringify(nav.activeContest.value));
+    nav.submitProblem(1001, { contestId: 10786, contestPid: 2 });
+    nav.navigate('status');
+    check('navigate clears contest context', nav.activeContest.value === null, JSON.stringify(nav.activeContest.value));
+    check('activeProblemId persists across unrelated navigation', nav.activeProblemId.value === 1001, String(nav.activeProblemId.value));
 }
 console.log('\n=== navigation: submitProblem contest context ===');
 {
@@ -113,8 +104,6 @@ console.log('\n=== navigation: viewThread ===');
     nav.viewThread(77, 3);
     check('viewThread honors explicit page', JSON.stringify(nav.activeThread.value) === JSON.stringify({ postId: 77, page: 3 }), JSON.stringify(nav.activeThread.value));
 }
-
-// ============================ mail-target ============================
 console.log('\n=== mail-target: set/clear semantics ===');
 {
     const a = mailTarget.useMailTarget();
@@ -131,8 +120,6 @@ console.log('\n=== mail-target: set/clear semantics ===');
     check('empty-string target is stored as-is (callers guard)', a.targetUser.value === '', JSON.stringify(a.targetUser.value));
     a.clearTarget();
 }
-
-// ============================ panel ============================
 console.log('\n=== panel: open/close/switch ===');
 {
     const p = panel.usePanel();
@@ -152,7 +139,10 @@ console.log('\n=== panel: open/close/switch ===');
 console.log('\n=== panel: openSource language mapping ===');
 {
     const p = panel.usePanel();
-    const cases: Array<[string, number]> = [
+    const cases: Array<[
+        string,
+        number
+    ]> = [
         ['C++', 1],
         ['C', 0],
         ['C (gcc)', 0],
@@ -185,12 +175,12 @@ console.log('\n=== panel: openProfile ===');
     check('panel switches between kinds', p.kind.value === 'rank' && p.profileUsername.value === 'alice');
     p.close();
 }
-
-// ============================ dialog ============================
 console.log('\n=== dialog: show/close resolution semantics ===');
 {
     const req = { title: '确认', message: '确定吗？', buttons: [{ id: 'ok', label: '确定' }, { id: 'cancel', label: '取消' }], cancelId: 'cancel' };
-    let resolved: { buttonId: string | null } | null = null;
+    let resolved: {
+        buttonId: string | null;
+    } | null = null;
     const shown = dialog.showDialog(req);
     shown.then((r) => { resolved = r; });
     check('showDialog exposes the request', dialog.activeDialog.value === req);
@@ -228,8 +218,6 @@ console.log('\n=== dialog: show/close resolution semantics ===');
     check('closeDialog() with no cancelId resolves null', JSON.stringify(r4) === JSON.stringify({ buttonId: null }), JSON.stringify(r4));
     check('final close leaves no active dialog', dialog.activeDialog.value === null);
 }
-
-// ============================ preferences ============================
 console.log('\n=== preferences: exposed constants ===');
 {
     check('schema version is 2', prefs.PREFERENCES_SCHEMA_VERSION === 2, String(prefs.PREFERENCES_SCHEMA_VERSION));
@@ -327,7 +315,6 @@ console.log('\n=== preferences: load() merge & corruption (fresh module instance
     check('corrupt storage: collect still works', (corrupt.collectSyncedSettings() as any).__version === 2);
     storageMap.delete(KEY);
 }
-
 console.log(`\n${passes} passed, ${failures} failed`);
 console.log(failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`);
 console.log('');

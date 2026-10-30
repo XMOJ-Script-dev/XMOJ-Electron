@@ -1,10 +1,5 @@
-// Minimal `vue` stub: just enough reactivity for src/stores/* to run under Node.
-// Implements ref / shallowRef / reactive / computed / watch with a tiny
-// dependency-tracking system (deep-watch semantics via re-collection on
-// every source() run, which matches how the stores use watch()).
 let activeEffect = null;
 const targetMap = new WeakMap();
-
 function track(target, key) {
     if (activeEffect === null)
         return;
@@ -16,7 +11,6 @@ function track(target, key) {
         depsMap.set(key, (dep = new Set()));
     dep.add(activeEffect);
 }
-
 function trigger(target, key) {
     const depsMap = targetMap.get(target);
     const dep = depsMap?.get(key);
@@ -25,7 +19,6 @@ function trigger(target, key) {
     for (const effect of [...dep])
         effect();
 }
-
 export function ref(initial) {
     const holder = { _value: initial };
     return {
@@ -41,11 +34,9 @@ export function ref(initial) {
         },
     };
 }
-
 export function shallowRef(initial) {
     return ref(initial);
 }
-
 export function reactive(target) {
     return new Proxy(target, {
         get(t, key, receiver) {
@@ -68,7 +59,6 @@ export function reactive(target) {
         },
     });
 }
-
 export function computed(fn) {
     return {
         get value() {
@@ -76,7 +66,6 @@ export function computed(fn) {
         },
     };
 }
-
 export function watch(source, cb, options = {}) {
     let initialized = false;
     const job = () => {

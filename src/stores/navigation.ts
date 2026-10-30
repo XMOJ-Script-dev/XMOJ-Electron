@@ -27,6 +27,7 @@ const activeContest = ref<{ contestId: number; contestPid: number } | null>(null
 const activeThread = ref<{ postId: number; page: number } | null>(null);
 export function useNavigation() {
     function navigate(id: ViewId): void {
+        activeContest.value = null;
         currentView.value = id;
     }
     function submitProblem(problemId: number, contest?: { contestId: number; contestPid: number } | null): void {
@@ -35,6 +36,7 @@ export function useNavigation() {
         currentView.value = 'submit';
     }
     function viewProblem(problemId: number): void {
+        activeContest.value = null;
         activeProblemId.value = problemId;
         currentView.value = 'problem';
     }

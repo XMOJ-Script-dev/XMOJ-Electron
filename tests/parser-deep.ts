@@ -44,7 +44,11 @@ console.log('\n=== ① 标题清洗矩阵（数字+分隔符前缀剥离） ==='
 }
 console.log('\n=== ② JUDGE_RESULTS 全 code 矩阵 (0-11 + 非法) ===');
 {
-    const expected: [number, string, SubmissionVerdict][] = [
+    const expected: [
+        number,
+        string,
+        SubmissionVerdict
+    ][] = [
         [0, 'Waiting', 'pending'],
         [1, 'Pending', 'pending'],
         [2, 'Compiling', 'pending'],
@@ -74,7 +78,11 @@ console.log('\n=== ② JUDGE_RESULTS 全 code 矩阵 (0-11 + 非法) ===');
 }
 console.log('\n=== ②b classifyVerdict 归类矩阵 ===');
 {
-    const cases: [string[], string, SubmissionVerdict][] = [
+    const cases: [
+        string[],
+        string,
+        SubmissionVerdict
+    ][] = [
         [['status_y'], '', 'accepted'],
         [['status_w'], '', 'pending'],
         [['status_n'], '', 'wrong_answer'],
@@ -104,7 +112,10 @@ console.log('\n=== ②b classifyVerdict 归类矩阵 ===');
 }
 console.log('\n=== ②c verdictCodeFromClasses 往返（status0-status11 经 parseStatusPage） ===');
 {
-    const labels: [number, string][] = [
+    const labels: [
+        number,
+        string
+    ][] = [
         [0, '等待'], [1, '等待重判'], [2, '编译中'], [3, '运行并评判'], [4, '正确'], [5, '格式错误'],
         [6, '答案错误'], [7, '时间超限'], [8, '内存超限'], [9, '输出超限'], [10, '运行错误'], [11, '编译错误'],
     ];
@@ -154,7 +165,7 @@ console.log('\n=== ③ parseStatusPage 合成行矩阵（userRating / 裸数值 
 console.log('\n=== ④ 榜单元格 AC 颜色全矩阵 ===');
 {
     const acColors = ['#33ff33', '#53ff73', '#93ff93', '#aaffaa', '#00ff00', '#53ff53', '#aaaaff', 'rgb(51, 255, 51)', '33ff33'];
-    const nonAcColors = ['#eeeeee', '#ffa0a0', 'rgb(255, 160, 160)', '#ff5555', '#aaaaee', 'red', ''];
+    const nonAcColors = ['#eeeeee', '#ffa0a0', 'rgb(255, 160, 160)', '#ff5555', '#aaaaee', '#ffffff', '#ffff00', '#00ffff', 'red', ''];
     const fixed = '<th>排名</th><th>用户</th><th>昵称</th><th>通过</th><th>得分</th>';
     const header = fixed + [...acColors, ...nonAcColors].map((_, i) => `<th>P${i}</th>`).join('');
     const cells = [...acColors, ...nonAcColors].map((color) => color === ''

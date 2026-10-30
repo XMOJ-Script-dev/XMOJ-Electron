@@ -68,7 +68,11 @@ export async function fetchContestDetail(http: HttpClient, contestId: number): P
     if (!result.ok || !result.data) {
         return { ok: false, status: result.status, data: null, error: result.error };
     }
-    const { createdBy, ...contestRest } = result.data.contest;
+    const contest = result.data.contest;
+    if (!contest) {
+        return { ok: false, status: result.status, data: null, error: '比赛详情为空' };
+    }
+    const { createdBy, ...contestRest } = contest;
     const problems: ContestProblemSummary[] = (result.data.problems ?? []).map((problem) => {
         const rawId = problem.problemId;
         const id = typeof rawId === 'string' ? Number.parseInt(rawId, 10) : typeof rawId === 'number' ? rawId : null;

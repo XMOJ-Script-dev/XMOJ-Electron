@@ -158,12 +158,14 @@ watch(mailTarget.targetUser, (user) => {
     void revealThread(user);
 });
 onMounted(() => {
-    if (mailTarget.targetUser.value) {
-        const user = mailTarget.targetUser.value;
-        mailTarget.clearTarget();
-        void revealThread(user);
-    }
-    void loadThreads();
+    void (async () => {
+        await loadThreads();
+        if (mailTarget.targetUser.value) {
+            const user = mailTarget.targetUser.value;
+            mailTarget.clearTarget();
+            await revealThread(user);
+        }
+    })();
 });
 </script>
 
