@@ -1,12 +1,21 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseProblemsetPage, parseStatusPage, parseCountdown, describeVerdictCode, verdictCodeFromLabel } from '../electron/parsers.ts';
 import { parseContestRank, fetchContestRank } from '../electron/rank.ts';
 import type { HttpClient } from '../electron/http.ts';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const dump = (name: string) => readFileSync(path.join(here, 'live-dump', name), 'utf8');
+const skippedFixtures: string[] = [];
+const dump = (name: string): string | null => {
+    const file = path.join(here, 'live-dump', name);
+    if (!existsSync(file)) {
+        if (!skippedFixtures.includes(name))
+            skippedFixtures.push(name);
+        return null;
+    }
+    return readFileSync(file, 'utf8');
+};
 console.log('=== 标题清洗：仅剥离「数字+分隔符」前缀 ===');
 {
     const html = `<html><body><table id="problemset"><tbody>
@@ -37,11 +46,17 @@ console.log('=== JUDGE_RESULTS code 3（运行并评判 -> pending） ===');
 }
 console.log('=== userRating 不再误抓判题机列 ===');
 {
-    const page = parseStatusPage(dump('status.html'));
-    assert.ok(page.submissions.length > 0, 'fixture rows parsed');
-    for (const s of page.submissions) {
-        assert.equal(s.userRating, null, `id=${s.id} userRating=${JSON.stringify(s.userRating)}`);
-        assert.equal(s.user, 'shanwenxiao', JSON.stringify(s.user));
+    const live = dump('status.html');
+    if (live) {
+        const page = parseStatusPage(live);
+        assert.ok(page.submissions.length > 0, 'fixture rows parsed');
+        for (const s of page.submissions) {
+            assert.equal(s.userRating, null, `id=${s.id} userRating=${JSON.stringify(s.userRating)}`);
+            assert.equal(s.user, 'shanwenxiao', JSON.stringify(s.user));
+        }
+    }
+    else {
+        console.log(`  [SKIP] live-dump/status.html 缺失（CI），依赖它的断言跳过`);
     }
     const withBadge = parseStatusPage(`<html><body><table id="result-tab"><tbody>
   <tr><td></td><td>1</td><td><a href='userinfo.php?user=alice'>alice</a></td><td><a href='problem.php?id=1000'>1000</a></td><td class="status_y">Accepted</td><td>1 KB</td><td>1 MS</td><td>C++</td><td>10 B</td><td>2026-10-09 22:24:21</td><td class='hidden-xs'>Expert</td></tr>
@@ -62,7 +77,12 @@ console.log('=== 榜单元格 AC 颜色（G=255 或一血 #aaaaff） ===');
 }
 {
     for (const [file, oi] of [['audit-contestrank-oi-10786.html', true], ['audit-contestrank-correct-10786.html', false]] as const) {
-        const rank = parseContestRank(dump(file), 10786, oi);
+        const html = dump(file);
+        if (!html) {
+            console.log(`  [SKIP] live-dump/${file} 缺失（CI），该文件断言跳过`);
+            continue;
+        }
+        const rank = parseContestRank(html, 10786, oi);
         assert.ok(rank.rows.length > 0, `${file} rows`);
         const acceptedCount = rank.rows.reduce((sum, row) => sum + row.cells.filter((c) => c.accepted).length, 0);
         assert.ok(acceptedCount > 0, `${file} accepted cells via G=255 heuristic`);
@@ -70,7 +90,8 @@ console.log('=== 榜单元格 AC 颜色（G=255 或一血 #aaaaff） ===');
 }
 {
     const jsonText = dump('audit-contest-rank-correct-json.json');
-    const payload = JSON.parse(jsonText);
+    if (jsonText) {
+        const payload = JSON.parse(jsonText);
     const colors = new Set<string>();
     for (const row of payload.rows ?? [])
         for (const cell of row.cells ?? [])
@@ -104,13 +125,25 @@ console.log('=== 榜单元格 AC 颜色（G=255 或一血 #aaaaff） ===');
                 assert.equal(cell.accepted, true, `bgColor=${bg} text=${cell.text}`);
         }
     }
+    }
+    else {
+        console.log('  [SKIP] live-dump/audit-contest-rank-correct-json.json 缺失（CI），该文件断言跳过');
+    }
 }
 console.log('=== 倒计时保持网站源顺序 ===');
 {
-    const items = parseCountdown(dump('index.html'));
-    assert.ok(items.length > 1, `got ${items.length}`);
-    assert.equal(items[0]?.event, 'GESP 2026 12月', JSON.stringify(items[0]?.event));
-    for (let i = 1; i < items.length; i++)
-        assert.ok(items[i - 1]!.days >= items[i]!.days, `order broken at ${i}: ${items[i - 1]!.days} < ${items[i]!.days}`);
+    const indexHtml = dump('index.html');
+    if (indexHtml) {
+        const items = parseCountdown(indexHtml);
+        assert.ok(items.length > 1, `got ${items.length}`);
+        assert.equal(items[0]?.event, 'GESP 2026 12月', JSON.stringify(items[0]?.event));
+        for (let i = 1; i < items.length; i++)
+            assert.ok(items[i - 1]!.days >= items[i]!.days, `order broken at ${i}: ${items[i - 1]!.days} < ${items[i]!.days}`);
+    }
+    else {
+        console.log('  [SKIP] live-dump/index.html 缺失（CI），该文件断言跳过');
+    }
 }
+if (skippedFixtures.length)
+    console.log(`Skipped live-dump fixtures (gitignored, absent in CI): ${skippedFixtures.join(', ')}`);
 console.log('Bug-fix regressions passed.');
