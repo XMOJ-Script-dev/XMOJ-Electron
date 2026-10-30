@@ -1,6 +1,6 @@
 <script setup lang="ts">import { computed, onMounted, ref } from 'vue';
 import { useErrorToast } from '@/composables/useErrorToast';
-import { ChevronLeft, ChevronRight, RefreshCw, Trophy, Play } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, RefreshCw, Trophy, Play, Send } from '@lucide/vue';
 import ContestReplay from '@/components/ContestReplay.vue';
 import { Button } from '@/components/ui/button';
 import UserChip from '@/components/UserChip.vue';
@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { fetchContestDetail, fetchContestList } from '@/services/api';
 import { useNavigation } from '@/stores/navigation';
 import { usePanel } from '@/stores/panel';
-import type { ContestDetail, ContestSummary } from '@/shared/types';
+import type { ContestDetail, ContestProblemSummary, ContestSummary } from '@/shared/types';
 const navigation = useNavigation();
 const panel = usePanel();
 const contests = ref<ContestSummary[]>([]);
@@ -107,6 +107,18 @@ function closeContest(): void {
 function openProblem(problemId: number | null): void {
     if (problemId !== null)
         navigation.viewProblem(problemId);
+}
+function submitProblem(problem: ContestProblemSummary): void {
+    const current = detail.value;
+    if (!current || problem.problemId === null)
+        return;
+    const index = current.problems.indexOf(problem);
+    if (index < 0)
+        return;
+    navigation.submitProblem(problem.problemId, {
+        contestId: current.contest.contestId,
+        contestPid: index,
+    });
 }
 function problemStatusClass(status: string | null | undefined): string {
     const value = String(status ?? '').toUpperCase();
@@ -226,6 +238,7 @@ onMounted(() => {
               <span>#{{ contest.contestId }}</span>
               <span>{{ contest.startTime ?? '—' }}</span>
               <span>→ {{ contest.endTime ?? '—' }}</span>
+              <span v-if="contest.creator">创建者 {{ contest.creator }}</span>
             </span>
           </span>
         </button>
@@ -281,24 +294,35 @@ onMounted(() => {
       </div>
 
       <div v-else-if="detail.problems.length" class="divide-y rounded-xl border">
-      <button
+        <div
           v-for="problem in detail.problems"
           :key="problem.num"
-          class="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-accent/50"
-          @click="openProblem(problem.problemId)"
+          class="flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50"
         >
-          <span
-            class="flex size-7 shrink-0 items-center justify-center rounded-md border font-mono text-xs"
-            :class="problemStatusClass(problem.status)"
-            :title="problemStatusLabel(problem.status)"
+          <button class="flex min-w-0 flex-1 items-center gap-3 text-left" @click="openProblem(problem.problemId)">
+            <span
+              class="flex size-7 shrink-0 items-center justify-center rounded-md border font-mono text-xs"
+              :class="problemStatusClass(problem.status)"
+              :title="problemStatusLabel(problem.status)"
+            >
+              {{ problem.num }}
+            </span>
+            <span class="min-w-0 flex-1 truncate text-sm">{{ problem.title }}</span>
+            <span v-if="problem.problemId" class="shrink-0 font-mono text-xs text-muted-foreground">
+              #{{ problem.problemId }}
+            </span>
+          </button>
+          <Button
+            v-if="problem.problemId"
+            variant="outline"
+            size="sm"
+            class="shrink-0"
+            @click="submitProblem(problem)"
           >
-            {{ problem.num }}
-          </span>
-          <span class="min-w-0 flex-1 truncate text-sm">{{ problem.title }}</span>
-          <span v-if="problem.problemId" class="shrink-0 font-mono text-xs text-muted-foreground">
-            #{{ problem.problemId }}
-          </span>
-        </button>
+            <Send />
+            提交
+          </Button>
+        </div>
       </div>
 
       <div

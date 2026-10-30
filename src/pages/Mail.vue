@@ -1,4 +1,4 @@
-<script setup lang="ts">import { computed, onMounted, ref } from 'vue';
+<script setup lang="ts">import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useErrorToast } from '@/composables/useErrorToast';
 import { ArrowLeft, Loader2, RefreshCw, Send } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +9,10 @@ import AnnouncementBody from '@/components/AnnouncementBody.vue';
 import UserChip from '@/components/UserChip.vue';
 import { fetchMail, fetchMailList, sendMail, userExists } from '@/services/api';
 import { useSession } from '@/stores/session';
+import { useMailTarget } from '@/stores/mail-target';
 import type { MailMessage, MailThreadSummary } from '@/shared/community';
 const session = useSession();
+const mailTarget = useMailTarget();
 const threads = ref<MailThreadSummary[]>([]);
 const messages = ref<MailMessage[]>([]);
 const activeUser = ref<string | null>(null);
@@ -144,7 +146,27 @@ function formatTime(value?: number): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-onMounted(() => void loadThreads());
+async function revealThread(otherUser: string): Promise<void> {
+    await openThread(otherUser);
+    await nextTick();
+    document.getElementById(`mail-thread-${otherUser}`)?.scrollIntoView({ block: 'nearest' });
+}
+watch(mailTarget.targetUser, (user) => {
+    if (!user)
+        return;
+    mailTarget.clearTarget();
+    void revealThread(user);
+});
+onMounted(() => {
+    void (async () => {
+        await loadThreads();
+        if (mailTarget.targetUser.value) {
+            const user = mailTarget.targetUser.value;
+            mailTarget.clearTarget();
+            await revealThread(user);
+        }
+    })();
+});
 </script>
 
 <template>
@@ -191,6 +213,7 @@ onMounted(() => void loadThreads());
         </div>
         <button
           v-for="thread in threads"
+          :id="`mail-thread-${thread.OtherUser}`"
           :key="thread.OtherUser"
           class="flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:bg-accent/50"
           :class="activeUser === thread.OtherUser ? 'border-primary bg-accent/50' : ''"
@@ -198,6 +221,9 @@ onMounted(() => void loadThreads());
         >
           <span class="min-w-0 flex-1">
             <UserChip :username="thread.OtherUser" :size="22" class="font-medium" />
+            <span class="mt-0.5 block truncate text-xs text-muted-foreground">
+              {{ thread.LastsMessage || '—' }}
+            </span>
             <span class="mt-0.5 block truncate text-xs text-muted-foreground">
               {{ formatTime(thread.SendTime) }}
             </span>
@@ -238,7 +264,10 @@ onMounted(() => void loadThreads());
               <header class="flex items-center justify-between border-b px-4 py-2 text-xs">
                 <span v-if="message.FromUser === currentUser" class="font-medium">我</span>
                 <UserChip v-else :username="message.FromUser" :size="20" />
-                <span class="text-muted-foreground">{{ formatTime(message.SendTime) }}</span>
+                <span class="flex items-center gap-2 text-muted-foreground">
+                  <Badge v-if="message.FromUser !== currentUser && !message.IsRead" variant="secondary">未读</Badge>
+                  {{ formatTime(message.SendTime) }}
+                </span>
               </header>
               <AnnouncementBody class="px-4 py-3 text-sm" :source="message.Content" />
             </article>

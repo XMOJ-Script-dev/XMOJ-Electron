@@ -150,6 +150,13 @@ const verdictStyles: Record<SubmissionVerdict, string> = {
 function verdictStyle(verdict: SubmissionVerdict): string {
     return verdictStyles[verdict] ?? verdictStyles.other;
 }
+function formatCodeLength(bytes: number | null): string {
+    if (bytes === null || !Number.isFinite(bytes))
+        return '—';
+    if (bytes < 1024)
+        return `${bytes}B`;
+    return `${(bytes / 1024).toFixed(1)}KB`;
+}
 function openSubmission(submission: SubmissionEntry): void {
     panel.openSource(submission.id, `提交 #${submission.id} · ${submission.problemTitle || ''}`, submission.language);
 }
@@ -234,7 +241,7 @@ function openSubmission(submission: SubmissionEntry): void {
     </div>
 
     <div v-else-if="submissions.length > 0" class="min-w-0 max-w-full overflow-x-auto rounded-xl border" data-slot="status-table-scroll" role="region" aria-label="评测记录，可左右滚动查看完整列" tabindex="0">
-      <table class="w-full min-w-[960px] whitespace-nowrap text-sm">
+      <table class="w-full min-w-[1040px] whitespace-nowrap text-sm">
         <thead class="bg-muted/50 text-muted-foreground">
           <tr>
             <th class="w-20 px-3 py-2 text-right font-medium">编号</th>
@@ -244,6 +251,7 @@ function openSubmission(submission: SubmissionEntry): void {
             <th class="w-24 px-3 py-2 text-right font-medium">内存</th>
             <th class="w-24 px-3 py-2 text-right font-medium">耗时</th>
             <th class="px-3 py-2 text-left font-medium">语言</th>
+            <th class="w-20 px-3 py-2 text-right font-medium">代码长度</th>
             <th class="w-40 px-3 py-2 text-left font-medium">提交时间</th>
           </tr>
         </thead>
@@ -277,6 +285,9 @@ function openSubmission(submission: SubmissionEntry): void {
               {{ formatTime(submission.timeMs) }}
             </td>
             <td class="px-3 py-2 text-muted-foreground">{{ submission.language || '—' }}</td>
+            <td class="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">
+              {{ formatCodeLength(submission.codeLength) }}
+            </td>
             <td class="px-3 py-2 font-mono text-xs text-muted-foreground">
               {{ formatDateTime(submission.submittedAt) }}
             </td>

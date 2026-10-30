@@ -75,7 +75,7 @@ onMounted(() => {
       <Status v-else-if="view === 'status'" />
       <Discussion v-else-if="view === 'discussion'" />
       <Mail v-else-if="view === 'mail'" />
-      <Submit v-else-if="view === 'submit'" :problem-id="navigation.activeProblemId.value" />
+      <Submit v-else-if="view === 'submit'" :problem-id="navigation.activeProblemId.value" :contest-id="navigation.activeContest.value?.contestId" :contest-pid="navigation.activeContest.value?.contestPid" />
       <Compare v-else-if="view === 'compare'" />
       <Contests v-else-if="view === 'contests'" />
       <Monthly v-else-if="view === 'monthly'" />

@@ -1,4 +1,4 @@
-import { XMOJ_ORIGIN, type ContestDetail, type ContestListPage, type ContestProblemSummary, type NavInfo, } from '../src/shared/types.ts';
+import { XMOJ_ORIGIN, type ContestDetail, type ContestListPage, type ContestProblemSummary, type ContestSummary, type NavInfo, } from '../src/shared/types.ts';
 import type { HttpClient } from './http.ts';
 interface JsonResult<T> {
     ok: boolean;
@@ -41,12 +41,25 @@ async function getJson<T>(http: HttpClient, path: string): Promise<JsonResult<T>
 export function fetchNavInfo(http: HttpClient): Promise<JsonResult<NavInfo>> {
     return getJson<NavInfo>(http, '/api/nav');
 }
-export function fetchContestList(http: HttpClient, page = 1): Promise<JsonResult<ContestListPage>> {
-    return getJson<ContestListPage>(http, `/api/contest/list?pageNum=${page}`);
+export async function fetchContestList(http: HttpClient, page = 1): Promise<JsonResult<ContestListPage>> {
+    const result = await getJson<Omit<ContestListPage, 'list'> & {
+        list?: (ContestSummary & { createdBy?: string | null })[];
+    }>(http, `/api/contest/list?pageNum=${page}`);
+    if (!result.ok || !result.data) {
+        return { ok: false, status: result.status, data: null, error: result.error };
+    }
+    const list = (result.data.list ?? []).map((contest) => {
+        const { createdBy, ...rest } = contest;
+        return {
+            ...rest,
+            creator: contest.creator ?? createdBy ?? null,
+        };
+    });
+    return { ok: true, status: result.status, data: { ...result.data, list } };
 }
 export async function fetchContestDetail(http: HttpClient, contestId: number): Promise<JsonResult<ContestDetail>> {
     const result = await getJson<{
-        contest: ContestDetail['contest'];
+        contest: ContestDetail['contest'] & { createdBy?: string | null };
         problems?: RawContestProblem[];
         myRole?: string | null;
         canExport?: boolean;
@@ -55,6 +68,11 @@ export async function fetchContestDetail(http: HttpClient, contestId: number): P
     if (!result.ok || !result.data) {
         return { ok: false, status: result.status, data: null, error: result.error };
     }
+    const contest = result.data.contest;
+    if (!contest) {
+        return { ok: false, status: result.status, data: null, error: '比赛详情为空' };
+    }
+    const { createdBy, ...contestRest } = contest;
     const problems: ContestProblemSummary[] = (result.data.problems ?? []).map((problem) => {
         const rawId = problem.problemId;
         const id = typeof rawId === 'string' ? Number.parseInt(rawId, 10) : typeof rawId === 'number' ? rawId : null;
@@ -69,7 +87,10 @@ export async function fetchContestDetail(http: HttpClient, contestId: number): P
         ok: true,
         status: result.status,
         data: {
-            contest: result.data.contest,
+            contest: {
+                ...contestRest,
+                creator: result.data.contest.creator ?? createdBy ?? null,
+            },
             problems,
             myRole: result.data.myRole ?? null,
             canExport: Boolean(result.data.canExport),
