@@ -260,6 +260,7 @@ onMounted(() => {
           </div>
           <CodeEditor :model-value="std" :language-id="1" readonly height="60vh" />
         </div>
+        <p v-else class="text-sm text-muted-foreground">该题暂无标程</p>
       </DialogContent>
     </Dialog>
   </div>
