@@ -640,7 +640,7 @@ export function parseStatusPage(html: string): StatusPage {
                 break;
             }
         }
-                let userRating: string | null = null;
+        let userRating: string | null = null;
         const stampIndex = cellText.indexOf(submittedAt);
         if (stampIndex !== -1) {
             for (let i = stampIndex + 1; i < cellText.length; i++) {

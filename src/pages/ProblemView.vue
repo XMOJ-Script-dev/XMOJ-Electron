@@ -95,7 +95,7 @@ async function loadStd(id: number): Promise<void> {
 }
 function openStd(): void {
     stdDialogOpen.value = true;
-    if (!stdLoading.value && problem.value)
+    if (!stdLoading.value && !std.value && problem.value)
         void loadStd(problem.value.id);
 }
 watch(() => navigation.activeProblemId.value, (id) => {
