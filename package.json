@@ -19,7 +19,7 @@
     "test:cache": "node --experimental-strip-types --loader ./tests/loader.mjs tests/cache.ts",
     "test:async-resource": "node --experimental-strip-types tests/async-resource.ts",
     "test:e2e-readiness": "node --test tests/e2e-readiness.test.mjs",
-    "test:web-functions": "node --experimental-strip-types --test tests/web-functions.test.mjs",
+    "test:web-functions": "node --experimental-strip-types --test tests/web-functions.test.mjs tests/web-public.test.mjs tests/web-session.test.mjs",
     "test:native-views": "node --experimental-strip-types --loader ./tests/loader.mjs tests/native-views.ts",
     "test:cloud-settings": "node --experimental-strip-types --loader ./tests/loader.mjs tests/community-settings.ts",
     "test:markdown": "node --experimental-strip-types --loader ./tests/loader.mjs tests/markdown.ts",

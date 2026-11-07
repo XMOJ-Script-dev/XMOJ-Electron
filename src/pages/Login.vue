@@ -3,6 +3,7 @@ import { Loader2, LockKeyhole, User } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSession } from '@/stores/session';
+const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const session = useSession();
 const username = ref(session.state.rememberedUsername ?? '');
 const password = ref('');
@@ -68,7 +69,7 @@ async function submit(): Promise<void> {
           </div>
         </div>
 
-        <label class="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+        <label v-if="!webBuild" class="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
           <input
             v-model="remember"
             type="checkbox"

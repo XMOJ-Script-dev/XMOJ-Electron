@@ -1,6 +1,6 @@
 import type { XmojApi } from '../../electron/preload';
 import { SOFTWARE } from '@/shared/software';
-import { XMOJ_ORIGIN, type HomeSnapshot, type MonthlyBoard } from '@/shared/types';
+import { XMOJ_ORIGIN, type HomeSnapshot, type LoginRequest, type MonthlyBoard, type ProblemsetPage, type ProblemDetail, type ProblemsetQuery, type StatusPage, type StatusQuery } from '@/shared/types';
 
 const EMPTY_SESSION = {
     authenticated: false,
@@ -146,6 +146,35 @@ async function getHtml(path: 'home' | 'monthly'): Promise<HtmlResponse> {
     return payload;
 }
 
+async function requestSession(method: 'GET' | 'POST' | 'DELETE', body?: unknown) {
+    const response = await fetch('/api/session', {
+        method,
+        credentials: 'include',
+        headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const payload = await response.json() as { error?: string; ok?: boolean; state?: typeof EMPTY_SESSION };
+    if (!response.ok) throw new Error(payload.error ?? '网页会话暂不可用');
+    return payload;
+}
+
+async function requestJson<T>(path: string): Promise<T> {
+    const response = await fetch(path, { credentials: 'omit' });
+    const payload = await response.json() as T | { error?: string };
+    if (!response.ok || (payload && typeof payload === 'object' && 'error' in payload)) {
+        throw new Error(
+            payload && typeof payload === 'object' && 'error' in payload && payload.error
+                ? payload.error
+                : '网页数据暂时不可用',
+        );
+    }
+    return payload as T;
+}
+
+function cached<T>(value: T) {
+    return { value, fetchedAt: Date.now(), fromCache: false };
+}
+
 function unavailable(): Promise<never> {
     return Promise.reject(new Error('此功能需要账户会话，目前网页版仅开放公开浏览功能。'));
 }
@@ -158,14 +187,30 @@ export function installWebApi(): void {
     const noSubscription = () => () => undefined;
     const api = {
         session: {
-            get: async () => ({ ...EMPTY_SESSION }),
-            verify: async () => ({ ...EMPTY_SESSION }),
-            login: async () => ({
-                ok: false,
-                message: '网页版暂不支持账户登录。请使用桌面版处理需要登录的功能。',
-                state: { ...EMPTY_SESSION },
-            }),
-            logout: async () => ({ ...EMPTY_SESSION }),
+            get: async () => {
+                const payload = await requestSession('GET');
+                return payload as Awaited<ReturnType<XmojApi['session']['get']>>;
+            },
+            verify: async () => {
+                const payload = await requestSession('GET');
+                return payload as Awaited<ReturnType<XmojApi['session']['verify']>>;
+            },
+            login: async ({ username, password }: LoginRequest) => {
+                try {
+                    const payload = await requestSession('POST', { username, password });
+                    return payload as Awaited<ReturnType<XmojApi['session']['login']>>;
+                } catch (error) {
+                    return {
+                        ok: false,
+                        message: error instanceof Error ? error.message : String(error),
+                        state: { ...EMPTY_SESSION },
+                    };
+                }
+            },
+            logout: async () => {
+                const payload = await requestSession('DELETE');
+                return payload as Awaited<ReturnType<XmojApi['session']['logout']>>;
+            },
         },
         home: {
             snapshot: async () => parseHome(await getHtml('home')),
@@ -194,8 +239,15 @@ export function installWebApi(): void {
             onDownloadProgress: noSubscription,
             onExportProgress: noSubscription,
         },
-        problemset: unavailableSection,
-        problem: unavailableSection,
+        problemset: {
+            list: async (query: ProblemsetQuery = {}) => cached(await requestJson<ProblemsetPage>(
+                `/api/problemset${query.search ? `?search=${encodeURIComponent(query.search)}` : ''}`,
+            )),
+            all: async () => requestJson<ProblemsetPage>('/api/problemset'),
+        },
+        problem: {
+            detail: async (problemId: number) => cached(await requestJson<ProblemDetail>(`/api/problem?id=${problemId}`)),
+        },
         contest: unavailableSection,
         nav: unavailableSection,
         user: unavailableSection,
@@ -203,7 +255,15 @@ export function installWebApi(): void {
         cache: unavailableSection,
         source: unavailableSection,
         submit: unavailableSection,
-        status: unavailableSection,
+        status: {
+            list: async (query: StatusQuery = {}) => {
+                const params = new URLSearchParams();
+                for (const [key, value] of Object.entries(query)) {
+                    if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+                }
+                return requestJson<StatusPage>(`/api/status?${params}`);
+            },
+        },
         bbs: unavailableSection,
         mail: unavailableSection,
         notices: unavailableSection,

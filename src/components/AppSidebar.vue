@@ -23,7 +23,7 @@ const mainItems = [
 ];
 const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const visibleMainItems = computed(() => webBuild
-    ? mainItems.filter(item => ['home', 'monthly', 'downloads'].includes(item.id))
+    ? mainItems.filter(item => ['home', 'problemset', 'status', 'monthly', 'downloads'].includes(item.id))
     : mainItems);
 const footerItems = [
     { id: 'mail' as ViewId, title: '短消息', icon: Mail },
@@ -116,7 +116,7 @@ function handleSignIn(): void {
                   <UserChip v-if="username" :username="username" :avatar="false" :link="false" />
                   <span v-else class="truncate">未登录</span>
                   <span class="truncate text-xs text-muted-foreground">
-                    {{ isAuthenticated ? (isAdmin ? '管理员' : '已登录') : webBuild ? '公开浏览' : '请登录' }}
+                    {{ isAuthenticated ? (isAdmin ? '管理员' : '已登录') : webBuild ? '公开浏览/登录' : '请登录' }}
                   </span>
                 </div>
                 <ChevronsUpDown class="ml-auto group-data-[collapsible=icon]:hidden" />
@@ -163,7 +163,7 @@ function handleSignIn(): void {
                 <LogOut />
                 注销
               </DropdownMenuItem>
-              <DropdownMenuItem v-else-if="!webBuild" @select="handleSignIn">
+              <DropdownMenuItem v-else @select="handleSignIn">
                 <LogIn />
                 登录
               </DropdownMenuItem>
