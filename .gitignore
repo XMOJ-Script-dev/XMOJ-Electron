@@ -11,6 +11,7 @@ node_modules
 dist
 web-dist
 dist-ssr
+.wrangler
 # vite-plugin-electron emits the main/preload bundle here.
 dist-electron
 *.local
