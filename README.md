@@ -29,7 +29,7 @@ src/
 
 ## 已实现功能
 
-项目介绍页和面向使用者的完整指南位于 [项目网站](https://xmoj-script-dev.github.io/XMOJ-Electron/) 与 [使用文档](https://xmoj-script-dev.github.io/XMOJ-Electron/docs/)。
+项目介绍页和面向使用者的完整指南位于 [项目网站](https://elxmoj.xmoj-script.uk/) 与 [使用文档](https://elxmoj.xmoj-script.uk/docs/)。
 
 - **登录**：应用内表单，支持"记住密码"与启动时静默重新登录
 - **头像**：登录后由邮箱经 Cravatar 取头像（MD5 在主进程计算）
