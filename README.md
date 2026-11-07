@@ -86,7 +86,7 @@ src/
 
 首次启用时，先在 Actions 页面手动运行一次该工作流以创建 `github-pages` 分支，再到仓库 **Settings → Pages** 将部署来源设为 `github-pages` 分支的根目录。还需在 **Settings → Actions → General → Workflow permissions** 中允许 **Read and write permissions**；否则 `GITHUB_TOKEN` 即使在工作流中申请了 `contents: write`，仍可能因仓库权限设置而无法推送分支。
 
-README 中的公开网站及文档自定义域名由 **Cloudflare Pages** 部署；GitHub Actions 发布到 `github-pages` 分支是另一条发布路径，不负责该自定义域名。
+公开域名 `elxmoj.xmoj-script.uk` 由 **Cloudflare Pages** 的 Git 集成部署。请在 Cloudflare Pages 项目的 **Settings → Builds & deployments** 中将生产分支设为 `dev`，Build command 留空，并将 Build output directory 设为 `website`（相对仓库根目录；Root directory 留空）。这样 Pages 只会发布 `website/` 中的项目介绍页和文档，不会把仓库根目录的 Electron 应用入口 `index.html` 当作网站首页。上述是 Cloudflare 项目设置，需在 Cloudflare 控制台应用；GitHub Actions 的 `github-pages` 分支发布是独立路径，不负责该自定义域名。
 
 ## 开发
 
