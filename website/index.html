@@ -3,27 +3,145 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="XMOJ Electron：小明的 OJ 桌面客户端。下载 Windows、macOS、Linux 版本，了解使用与部署方法。">
-  <meta name="color-scheme" content="light dark">
-  <title>XMOJ Electron · 让专注回到解题</title>
+  <meta name="description" content="XMOJ Electron 是面向小明 OJ 的开源桌面客户端，提供题库、提交评测、竞赛、讨论、代码对比与 AC 代码导出。">
+  <meta name="theme-color" content="#f7f9f5">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="XMOJ Electron · 小明 OJ 桌面工作台">
+  <meta property="og:description" content="面向小明 OJ 的开源桌面客户端：题库、代码提交、赛事、讨论和学习记录，一站完成。">
+  <title>XMOJ Electron · 小明 OJ 桌面工作台</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <header class="nav wrap"><a class="brand" href="./"><span class="mark">X</span> XMOJ Electron</a><nav aria-label="主导航"><a href="#features">功能</a><a href="#download">下载</a><a href="#guide">开始使用</a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">GitHub ↗</a></nav></header>
+  <header class="nav wrap">
+    <a class="brand" href="./" aria-label="XMOJ Electron 首页"><span class="mark">X</span> XMOJ Electron</a>
+    <nav aria-label="主导航">
+      <a href="#features">产品功能</a>
+      <a href="#workflow">训练流程</a>
+      <a href="#download">下载</a>
+      <a href="./docs/">使用文档</a>
+      <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">GitHub ↗</a>
+    </nav>
+  </header>
   <main>
     <section class="hero wrap">
-      <div><p class="eyebrow">为 OI 训练打造的桌面工作台</p><h1>让专注<br>回到<span>解题。</span></h1><p class="intro">从浏览题目到编写代码，从查看评测到参与讨论。把熟悉的小明 OJ，装进更清晰、更顺手的桌面体验。</p><div class="actions"><a class="button" href="#download">下载客户端 <span>↓</span></a><a class="button secondary" href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">查看源代码 ↗</a></div><p class="fine">Windows · macOS · Linux / 开源桌面客户端</p></div>
-      <div class="workspace" aria-label="客户端功能示意，并非真实评测记录"><div class="windowbar"><i></i><i></i><i></i><span>XMOJ / 工作台示意</span></div><div class="mockbody"><aside><b>XMOJ Electron</b><span class="selected">题库</span><span>状态</span><span>讨论</span></aside><div class="mockcontent"><div class="mockhead"><span>Problem / 001</span><span class="pill">Accepted</span></div><h2>从第一行代码开始</h2><pre><code><em>#include</em> &lt;iostream&gt;
+      <div>
+        <p class="eyebrow">OPEN-SOURCE DESKTOP CLIENT FOR XMOJ</p>
+        <h1>把训练流程，<br>收进一个<span>工作台。</span></h1>
+        <p class="intro">XMOJ Electron 将小明 OJ 的题目、代码、评测和社区带到桌面。少一些来回切换，多一些专注思考。</p>
+        <div class="actions">
+          <a class="button" href="#download">获取客户端 <span>↓</span></a>
+          <a class="button secondary" href="./docs/">阅读使用文档 ↗</a>
+        </div>
+        <p class="fine">免费开源 · GPL-3.0 · Windows / macOS / Linux</p>
+      </div>
+      <div class="workspace" aria-label="客户端界面示意图，并非真实评测记录">
+        <div class="windowbar"><i></i><i></i><i></i><span>XMOJ / 训练工作台</span></div>
+        <div class="mockbody">
+          <aside><b>XMOJ Electron</b><span>首页</span><span class="selected">题库</span><span>提交状态</span><span>竞赛</span><span>讨论</span></aside>
+          <div class="mockcontent">
+            <div class="mockhead"><span>PROBLEM / 训练中</span><span class="pill">ACCEPTED</span></div>
+            <h2>从一道题，走到一次通过</h2>
+            <pre><code><em>#include</em> &lt;iostream&gt;
 
 <em>int</em> main() {
     std::cout &lt;&lt; <strong>"Hello, XMOJ!"</strong>;
     <em>return</em> 0;
-}</code></pre><div class="mockfoot"><span>编写 · 提交 · 进步</span><span>● Ready</span></div></div></div></div>
+}</code></pre>
+            <div class="mockfoot"><span>编写 · 提交 · 复盘</span><span>● Ready</span></div>
+          </div>
+        </div>
+      </div>
     </section>
-    <section id="features" class="wrap section"><p class="eyebrow">一个窗口，完整训练流程</p><h2>工具退后一步，思路向前一步。</h2><div class="cards"><article><span class="number">01 / EXPLORE</span><h3>清晰浏览题目</h3><p>搜索题库、查看题面和赛事，让下一道题更容易找到。</p></article><article><span class="number">02 / BUILD</span><h3>专注编写与评测</h3><p>Monaco 代码编辑、提交状态与评测详情，衔接你的解题过程。</p></article><article><span class="number">03 / CONNECT</span><h3>交流与积累</h3><p>Markdown 讨论与实时预览、AC 代码导出，让思考与成果有处安放。</p></article></div></section>
-    <section id="download" class="wrap section download"><div><p class="eyebrow">选择你的平台</p><h2>下一次训练，<br>从桌面开始。</h2><p>安装包以 GitHub Releases 实际发布的文件为准。<br>没有对应安装包时，可按仓库说明从源码构建。</p></div><div class="downloads"><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases/latest"><b>Windows</b><span>查看安装包 / .exe ↗</span></a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases/latest"><b>macOS</b><span>查看安装包 / .dmg ↗</span></a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases/latest"><b>Linux</b><span>查看安装包 / AppImage、.deb ↗</span></a><a class="all-releases" href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases">所有版本与更新记录 →</a></div></section>
-    <section id="guide" class="wrap section"><p class="eyebrow">QUICK START</p><h2>三步，进入训练。</h2><ol class="steps"><li><h3>下载安装</h3><p>在 Releases 选择适合系统与处理器架构的版本。请只从可信的项目发布页下载。</p></li><li><h3>登录你的账号</h3><p>使用小明 OJ 账号登录客户端。</p></li><li><h3>开始解题与讨论</h3><p>浏览题库、提交代码；发帖或回复前，按提示手动完成 Cloudflare 人机验证。</p></li></ol><details><summary>这个网站能在线运行客户端吗？</summary><p>不能。这是纯静态项目介绍与下载网站。客户端依赖 Electron 主进程进行会话管理、请求、保存和下载，不能直接作为浏览器网页运行。</p></details><details><summary>遇到安装或使用问题？</summary><p>请先查看 <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron#readme">README</a>，再到 <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/issues">Issues</a> 提供系统版本、客户端版本和复现步骤。不要上传密码、Cookie 或验证码令牌。</p></details></section>
+
+    <section id="features" class="wrap section">
+      <p class="eyebrow">ONE APP, YOUR WHOLE WORKFLOW</p>
+      <h2>解题所需，不止一个编辑器。</h2>
+      <div class="cards">
+        <article><span class="number">01 / DISCOVER</span><h3>题库与题面</h3><p>搜索题号或标题，浏览题目分块、样例输入输出和参考代码；在题库中分页，不必反复跳转原站。</p></article>
+        <article><span class="number">02 / SOLVE</span><h3>编写与提交</h3><p>在 Monaco 编辑器中选择语言和 O2，使用提交前检查、按题保存草稿，再从题面提交代码。</p></article>
+        <article><span class="number">03 / REVIEW</span><h3>评测与代码对比</h3><p>通过状态筛选和游标翻页查看提交；对比两份代码的逐行差异，跟进正在评测的记录。</p></article>
+        <article><span class="number">04 / COMPETE</span><h3>竞赛、作业与回放</h3><p>查看比赛状态、题目通过情况、OI 与订正排名；对已开放的赛事查看授权回放。</p></article>
+        <article><span class="number">05 / CONNECT</span><h3>讨论与消息</h3><p>浏览社区板块、引用回复、实时预览 Markdown；管理会话并接收未读提及提醒。</p></article>
+        <article><span class="number">06 / ORGANIZE</span><h3>个人记录与导出</h3><p>筛选已解决题目并跳转题面，按语言整理可读取的 AC 代码，显示进度并导出 ZIP。</p></article>
+      </div>
+    </section>
+
+    <section class="wrap section capability-directory">
+      <p class="eyebrow">A CLOSER LOOK</p>
+      <h2>从日常操作到个性设置。</h2>
+      <div class="directory-grid">
+        <article><h3>首页与阅读</h3><p>公告和服务公告、推荐内容、赛事倒计时、服务器时间；题面、公告和讨论支持 KaTeX、扩展 Markdown、表格与代码高亮。</p></article>
+        <article><h3>竞赛与分析</h3><p>竞赛 / 作业列表及详情、题目状态提示、OI 排名和订正排名；个人解题记录、提交历史与代码差异。</p></article>
+        <article><h3>文件与社区</h3><p>下载进度及取消、站外链接交由默认浏览器；讨论权限操作、Cloudflare 人机验证、短消息和未读提醒。</p></article>
+        <article><h3>桌面偏好</h3><p>亮色 / 暗色 / 系统主题、动画与时间显示选项、自动刷新、离开前确认、显式云同步和部分页面离线缓存。</p></article>
+      </div>
+      <a class="text-link" href="./docs/#features">逐项了解全部功能和使用方式 →</a>
+    </section>
+
+    <section id="workflow" class="wrap section workflow">
+      <div>
+        <p class="eyebrow">DESIGNED AROUND PRACTICE</p>
+        <h2>从发现题目到整理成果。</h2>
+        <p>客户端围绕真实训练过程组织功能，而不是把网站简单装进一个窗口。题库与状态可本地分页浏览，题面和讨论以原生界面呈现，提交编辑器、缓存与设置都在同一处。</p>
+        <a class="text-link" href="./docs/#features">查看完整功能说明 →</a>
+      </div>
+      <ol class="steps">
+        <li><h3>找到下一道题</h3><p>在题库中搜索题目，或从赛事和个人主页进入题面。</p></li>
+        <li><h3>编写并提交代码</h3><p>按题保存草稿，检查代码后选择语言与编译选项提交。</p></li>
+        <li><h3>查看结果并改进</h3><p>在状态页跟进评测、比较代码；通过后可整理 AC 代码。</p></li>
+      </ol>
+    </section>
+
+    <section class="wrap section highlights">
+      <p class="eyebrow">BUILT FOR DAILY USE</p>
+      <h2>细节服务于持续训练。</h2>
+      <div class="cards">
+        <article><h3>本地体验</h3><p>支持主题、动画、时间显示、自动刷新和离开前确认；部分页面可使用缓存离线查看。</p></article>
+        <article><h3>阅读与表达</h3><p>题面、公告、讨论支持扩展 Markdown、KaTeX、语法高亮和行号，代码对比展示逐行差异。</p></article>
+        <article><h3>明确的边界</h3><p>客户端依赖 Electron 桌面能力，不是网页版；讨论中的 Cloudflare 验证由用户在界面内完成。</p></article>
+      </div>
+    </section>
+
+    <section id="download" class="wrap section download">
+      <div>
+        <p class="eyebrow">DOWNLOAD FROM OFFICIAL RELEASES</p>
+        <h2>选择平台，<br>开始下一次训练。</h2>
+        <p>仅当对应文件出现在 GitHub Releases 时才可下载。发布包由项目的自动化构建流程生成；如果没有适合你的安装包，可查看源码构建说明。</p>
+        <p class="fine">请核对操作系统和处理器架构。遇到问题时，先查看文档中的安装与排障说明。</p>
+      </div>
+      <div class="downloads">
+        <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases/latest"><b>Windows</b><span>最新版本与 .exe 安装包 ↗</span></a>
+        <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases/latest"><b>macOS</b><span>最新版本与 .dmg 安装包 ↗</span></a>
+        <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases/latest"><b>Linux</b><span>最新版本与 AppImage / .deb ↗</span></a>
+        <a class="all-releases" href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases">所有版本与更新记录 →</a>
+      </div>
+    </section>
+
+    <section class="wrap section">
+      <p class="eyebrow">GETTING STARTED</p>
+      <h2>三步开始使用。</h2>
+      <ol class="steps">
+        <li><h3>下载并安装</h3><p>前往 Releases 选择与你的系统匹配的安装包。</p></li>
+        <li><h3>使用 OJ 账号登录</h3><p>客户端使用小明 OJ 账号访问题目及相关功能。</p></li>
+        <li><h3>开始练习</h3><p>从题库、赛事或个人主页进入题目，编写并提交代码。</p></li>
+      </ol>
+      <p class="docs-cta">第一次使用？<a class="text-link" href="./docs/">打开完整使用文档，了解登录、隐私、功能和常见问题 →</a></p>
+    </section>
+
+    <section class="wrap section project">
+      <p class="eyebrow">OPEN SOURCE</p>
+      <h2>透明、可检查、欢迎参与。</h2>
+      <p>项目以 GPL-3.0 许可发布。可以在 GitHub 查看源代码、版本记录和已知问题；提交问题时请提供复现步骤与客户端版本，不要附上密码、Cookie、验证码令牌或私人消息。</p>
+      <div class="actions">
+        <a class="button secondary" href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">查看源代码 ↗</a>
+        <a class="button secondary" href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/issues">反馈问题 ↗</a>
+      </div>
+    </section>
   </main>
-  <footer class="wrap"><span>XMOJ Electron · 社区开源客户端</span><div><a href="https://www.xmoj.tech/">小明的 OJ ↗</a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">源代码 ↗</a></div></footer>
+  <footer class="wrap">
+    <span>XMOJ Electron · GPL-3.0 开源桌面客户端</span>
+    <div><a href="./docs/">使用文档</a><a href="https://www.xmoj.tech/">小明的 OJ ↗</a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">源代码 ↗</a></div>
+    <p>本项目为社区客户端，与小明 OJ 官方网站及其运营方相互独立。</p>
+  </footer>
 </body>
 </html>

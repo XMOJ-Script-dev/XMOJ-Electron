@@ -29,6 +29,8 @@ src/
 
 ## 已实现功能
 
+项目介绍页和面向使用者的完整指南位于 [项目网站](website/index.html) 与 [使用文档](website/docs/index.html)。
+
 - **登录**：应用内表单，支持"记住密码"与启动时静默重新登录
 - **头像**：登录后由邮箱经 Cravatar 取头像（MD5 在主进程计算）
 - **用户标识**：凡是出现用户名的地方都渲染为「圆形头像 + 用户名 + 标签」，
@@ -77,6 +79,10 @@ src/
 - 反引号或波浪线代码围栏支持语法高亮与行号，例如围栏信息 `cpp lines=2-3,5` 高亮第 2、3、5 行。未指定语言时使用 C++，`plain` 或未知语言按纯文本显示。内置 C/C++、Python、Java、JavaScript/TypeScript、Bash、JSON、HTML/CSS 高亮。
 
 保留 GFM 表格、任务列表及 KaTeX 公式支持；代码中的公式和容器标记不参与渲染，最终 HTML 仍经过 DOMPurify 消毒。
+
+## 项目网站与文档发布
+
+网站源码和使用文档维护在 `website/`。将 `website/` 内容推送到 `master` 后，`.github/workflows/pages.yml` 会将完整静态站点发布到 `github-pages` 分支根目录；也可以在 Actions 页面手动运行该工作流。首次启用时，请在仓库 **Settings → Pages** 将部署来源设为 `github-pages` 分支的根目录。
 
 ## 开发
 
