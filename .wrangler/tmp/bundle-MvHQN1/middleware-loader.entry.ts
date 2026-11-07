@@ -3,12 +3,12 @@
 // export dynamically through wrangler, or we can potentially let users directly
 // add them as a sort of "plugin" system.
 
-import ENTRY, { __INTERNAL_WRANGLER_MIDDLEWARE__ } from "/home/runner/work/XMOJ-Electron/XMOJ-Electron/.wrangler/tmp/bundle-m7yUgI/middleware-insertion-facade.js";
+import ENTRY, { __INTERNAL_WRANGLER_MIDDLEWARE__ } from "/home/runner/work/XMOJ-Electron/XMOJ-Electron/.wrangler/tmp/bundle-MvHQN1/middleware-insertion-facade.js";
 import { __facade_invoke__, __facade_register__, Dispatcher } from "/home/runner/.npm/_npx/c943b712072b77c4/node_modules/wrangler/templates/middleware/common.ts";
-import type { WorkerEntrypointConstructor } from "/home/runner/work/XMOJ-Electron/XMOJ-Electron/.wrangler/tmp/bundle-m7yUgI/middleware-insertion-facade.js";
+import type { WorkerEntrypointConstructor } from "/home/runner/work/XMOJ-Electron/XMOJ-Electron/.wrangler/tmp/bundle-MvHQN1/middleware-insertion-facade.js";
 
 // Preserve all the exports from the worker
-export * from "/home/runner/work/XMOJ-Electron/XMOJ-Electron/.wrangler/tmp/bundle-m7yUgI/middleware-insertion-facade.js";
+export * from "/home/runner/work/XMOJ-Electron/XMOJ-Electron/.wrangler/tmp/bundle-MvHQN1/middleware-insertion-facade.js";
 
 class __Facade_ScheduledController__ implements ScheduledController {
 	readonly #noRetry: ScheduledController["noRetry"];

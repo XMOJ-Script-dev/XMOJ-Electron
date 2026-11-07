@@ -7021,18 +7021,28 @@ async function onRequestPost({ request, env: env2 }) {
   if (!sameOrigin(request)) return response({ error: "Invalid request origin" }, 403);
   const session = await readSession(request, env2);
   if (!session) return response({ error: "\u767B\u5F55\u72B6\u6001\u5DF2\u5931\u6548\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55" }, 401);
+  const contentLength = Number(request.headers.get("Content-Length"));
+  if (Number.isFinite(contentLength) && contentLength > 6e5) {
+    return response({ error: "\u63D0\u4EA4\u5185\u5BB9\u8FC7\u5927" }, 413);
+  }
   let input;
   try {
     const raw = await request.text();
-    if (raw.length > 6e5) return response({ error: "\u63D0\u4EA4\u5185\u5BB9\u8FC7\u5927" }, 413);
-    input = JSON.parse(raw);
+    if (new TextEncoder().encode(raw).byteLength > 6e5) {
+      return response({ error: "\u63D0\u4EA4\u5185\u5BB9\u8FC7\u5927" }, 413);
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return response({ error: "\u63D0\u4EA4\u8BF7\u6C42\u683C\u5F0F\u65E0\u6548" }, 400);
+    }
+    input = parsed;
   } catch {
     return response({ error: "\u63D0\u4EA4\u8BF7\u6C42\u683C\u5F0F\u65E0\u6548" }, 400);
   }
   const problemId = Number(input.problemId);
   const languageId = Number(input.languageId);
   const source = typeof input.source === "string" ? input.source : "";
-  if (!Number.isSafeInteger(problemId) || problemId < 1 || problemId > 1e9 || !Number.isSafeInteger(languageId) || languageId < 0 || languageId > 1e3 || !source.trim() || source.length > 512e3) {
+  if (!Number.isSafeInteger(problemId) || problemId < 1 || problemId > 1e9 || !Number.isSafeInteger(languageId) || languageId < 0 || languageId > 1e3 || !source.trim() || new TextEncoder().encode(source).byteLength > 512e3) {
     return response({ error: "\u63D0\u4EA4\u4FE1\u606F\u65E0\u6548" }, 400);
   }
   try {

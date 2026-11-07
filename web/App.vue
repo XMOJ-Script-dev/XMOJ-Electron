@@ -22,7 +22,7 @@ const navigation = useNavigation();
 const panel = usePanel();
 const session = useSession();
 const WebPanelHost = defineAsyncComponent(() => import('./WebPanelHost.vue'));
-const Submit = defineAsyncComponent(() => import('../src/pages/Submit.vue'));
+const Submit = defineAsyncComponent(() => import('./WebSubmit.vue'));
 const currentView = computed(() => navigation.currentView.value);
 const protectedViews = new Set<ViewId>([
   'submit', 'discussion', 'mail',

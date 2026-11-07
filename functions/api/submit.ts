@@ -25,11 +25,21 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
   const session = await readSession(request, env);
   if (!session) return response({ error: '登录状态已失效，请重新登录' }, 401);
 
+  const contentLength = Number(request.headers.get('Content-Length'));
+  if (Number.isFinite(contentLength) && contentLength > 600_000) {
+    return response({ error: '提交内容过大' }, 413);
+  }
   let input: Record<string, unknown>;
   try {
     const raw = await request.text();
-    if (raw.length > 600_000) return response({ error: '提交内容过大' }, 413);
-    input = JSON.parse(raw) as Record<string, unknown>;
+    if (new TextEncoder().encode(raw).byteLength > 600_000) {
+      return response({ error: '提交内容过大' }, 413);
+    }
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return response({ error: '提交请求格式无效' }, 400);
+    }
+    input = parsed as Record<string, unknown>;
   } catch {
     return response({ error: '提交请求格式无效' }, 400);
   }
@@ -39,7 +49,7 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
   if (
     !Number.isSafeInteger(problemId) || problemId < 1 || problemId > 1_000_000_000 ||
     !Number.isSafeInteger(languageId) || languageId < 0 || languageId > 1000 ||
-    !source.trim() || source.length > 512_000
+    !source.trim() || new TextEncoder().encode(source).byteLength > 512_000
   ) {
     return response({ error: '提交信息无效' }, 400);
   }
