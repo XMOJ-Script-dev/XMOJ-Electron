@@ -86,7 +86,7 @@ src/
 
 首次启用时，先在 Actions 页面手动运行一次该工作流以创建 `github-pages` 分支，再到仓库 **Settings → Pages** 将部署来源设为 `github-pages` 分支的根目录。`website/CNAME` 将自定义域名 `elxmoj.xmoj-script.uk` 一并发布；还需在 GitHub Pages 设置中配置该域名，并在 DNS 提供商中按 GitHub 指引配置记录。还需在 **Settings → Actions → General → Workflow permissions** 中允许 **Read and write permissions**；否则 `GITHUB_TOKEN` 即使在工作流中申请了 `contents: write`，仍可能因仓库权限设置而无法推送分支。
 
-公开浏览版由 Cloudflare Pages 项目从本仓库的 `dev` 分支构建。请在 Cloudflare Pages 项目 **Settings → Builds & deployments** 中将生产分支设为 `dev`、Root directory 留空、Build command 设为 `npm ci && npm run build:web`、Build output directory 设为 `web-dist`，并将 `webxmoj.xmoj-script.uk` 绑定为自定义域名。网页构建使用独立的 `web/index.html`，不使用仓库根目录供 Electron 打包的 `index.html`。该公开预览版只开放匿名首页、月赛信息和软件下载；登录、题目及评测、提交、讨论和私信等需要账户/桌面能力的功能尚未开放。部署或 DNS 项目设置需在 Cloudflare 控制台应用；GitHub Pages 的 `github-pages` 分支只用于介绍页及文档。
+公开浏览版由 Cloudflare Pages 项目从本仓库的 `dev` 分支构建。仓库根目录的 `wrangler.toml` 将 Pages 项目名设为 `webxmoj`、产物目录设为 `web-dist`，并固定 Workers compatibility date。首次创建 Cloudflare Pages 项目时，项目名须为 `webxmoj`；在项目 **Settings → Builds & deployments** 中将生产分支设为 `dev`、Root directory 留空、Build command 设为 `npm ci && npm run build:web`。再将 `webxmoj.xmoj-script.uk` 绑定为 Pages 自定义域名，并按 Cloudflare 指引完成 DNS。以上生产分支、构建命令和自定义域名仍由 Cloudflare 控制台管理，仓库配置文件不能修改账户中的现有项目或 DNS 记录。网页构建使用独立的 `web/index.html`，不使用仓库根目录供 Electron 打包的 `index.html`。该公开预览版只开放匿名首页、月赛信息和软件下载；登录、题目及评测、提交、讨论和私信等需要账户/桌面能力的功能尚未开放。GitHub Pages 的 `github-pages` 分支只用于介绍页及文档。
 
 ## 开发
 
