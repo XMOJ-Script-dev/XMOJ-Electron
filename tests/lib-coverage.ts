@@ -291,30 +291,28 @@ console.log('\n=== update: checkAppUpdate 三态（mock window.xmoj.app） ===')
         const mod = await import('../src/services/update.ts');
         return mod.checkAppUpdate();
     };
-    const manifest = {
-        UpdateHistory: {
-            '1.0.0': { UpdateDate: 1690000000, Prerelease: false, UpdateContents: [{ PR: 1, Description: '初始' }], Notes: 'n1' },
-            '1.1.1': { UpdateDate: 1700000000, Prerelease: false, UpdateContents: [{ PR: 7, Description: '修复' }], Notes: 'n2' },
-        },
-    };
+    const manifest = [
+        { tag_name: 'v1.0.0', prerelease: false, published_at: '2023-07-22T00:00:00Z', body: '初始' },
+        { tag_name: 'v1.1.1', prerelease: false, published_at: '2023-11-14T00:00:00Z', body: '修复' },
+    ];
     currentVersion = '1.1.0';
     fetchResult = { ok: true, status: 200, data: manifest };
     let result = await checkAppUpdate();
     check('1.1.0 vs 1.1.1 -> available', result.status === 'available', result.status);
-    check('latest 为 1.1.1', result.latest === '1.1.1', result.latest);
-    check('entries 含最新版本条目', result.entries.some(e => e.version === '1.1.1' && e.items[0]?.title === '#7' && e.items[0]?.description === '修复'), JSON.stringify(result.entries));
-    check('请求 Update.json', requested.length === 1 && requested[0]!.endsWith('/Update.json'), JSON.stringify(requested));
+    check('latest 为 v1.1.1', result.latest === 'v1.1.1', result.latest);
+    check('entries 含最新版本条目', result.entries.some(e => e.version === 'v1.1.1' && e.notes === '修复'), JSON.stringify(result.entries));
+    check('请求本仓库 Releases API', requested.length === 1 && requested[0]!.includes('api.github.com/repos/XMOJ-Script-dev/XMOJ-Electron/releases'), JSON.stringify(requested));
     currentVersion = '1.10.0';
-    fetchResult = { ok: true, status: 200, data: { UpdateHistory: { '1.9.9': { Prerelease: false } } } };
+    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v1.9.9', prerelease: false }] };
     result = await checkAppUpdate();
     check('1.10.0 vs 1.9.9 -> current（数值比较非字典序）', result.status === 'current', result.status);
-    check('latest 为 1.9.9', result.latest === '1.9.9', result.latest);
+    check('latest 为 v1.9.9', result.latest === 'v1.9.9', result.latest);
     currentVersion = '1.1.1';
     fetchResult = { ok: true, status: 200, data: manifest };
     result = await checkAppUpdate();
     check('版本相等 -> current', result.status === 'current', result.status);
     currentVersion = '1.1.2-beta';
-    fetchResult = { ok: true, status: 200, data: { UpdateHistory: { '1.1.2': { Prerelease: false } } } };
+    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v1.1.2', prerelease: false }] };
     result = await checkAppUpdate();
     check('预发布当前版本低于同名正式版 -> available', result.status === 'available', result.status);
     fetchResult = { ok: true, status: 200, data: manifest };
@@ -329,12 +327,12 @@ console.log('\n=== update: checkAppUpdate 三态（mock window.xmoj.app） ===')
     fetchResult = { ok: true, status: 200, data: {} };
     result = await checkAppUpdate();
     check('空历史 -> unknown', result.status === 'unknown', result.status);
-    fetchResult = { ok: true, status: 200, data: { UpdateHistory: { '2.0.0': { Prerelease: true }, '1.5.0': { Prerelease: false } } } };
+    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v2.0.0', prerelease: true }, { tag_name: 'v1.5.0', prerelease: false }] };
     currentVersion = '1.5.0';
     result = await checkAppUpdate();
-    check('最新为预览版时 latest 取最新正式版', result.latest === '1.5.0' && result.status === 'current', JSON.stringify({ latest: result.latest, status: result.status }));
-    check('entries 同时包含正式版与预览版', result.entries.length === 2 && result.entries.some(e => e.version === '2.0.0' && e.prerelease), JSON.stringify(result.entries));
-    fetchResult = { ok: true, status: 200, data: { UpdateHistory: { '2.0.0': { Prerelease: true } } } };
+    check('最新为预览版时 latest 取最新正式版', result.latest === 'v1.5.0' && result.status === 'current', JSON.stringify({ latest: result.latest, status: result.status }));
+    check('entries 同时包含正式版与预览版', result.entries.length === 2 && result.entries.some(e => e.version === 'v2.0.0' && e.prerelease), JSON.stringify(result.entries));
+    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v2.0.0', prerelease: true }] };
     result = await checkAppUpdate();
     check('全是预览版 -> unknown', result.status === 'unknown', result.status);
 }
