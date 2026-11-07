@@ -8,7 +8,7 @@ app.whenReady().then(async () => {
         const win = new BrowserWindow({ show: false, width: 1440, height: 1000, webPreferences: { sandbox: true } });
         await win.loadFile(path.join(root, 'index.html'));
         const run = code => win.webContents.executeJavaScript(code);
-        assert.equal(await run(`document.querySelector('h1').textContent`), '让专注回到解题。');
+        assert.match(await run(`document.querySelector('h1').textContent`), /把训练流程，\s*收进一个工作台。/);
         assert.ok(await run(`Array.from(document.querySelectorAll('a[href^="#"]')).every(a=>document.getElementById(a.hash.slice(1)))`));
         for (const href of await run(`Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(a=>a.getAttribute('href'))`)) assert.ok(existsSync(path.join(root, href)));
         assert.equal(await run(`document.querySelectorAll('input[type="password"]').length`), 0);
@@ -20,7 +20,9 @@ app.whenReady().then(async () => {
             const temp = process.platform === 'win32' && process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Temp', 'opencode') : app.getPath('temp');
             writeFileSync(path.join(temp, `xmoj-pages-${width}.png`), screenshot.toPNG());
         }
-        assert.ok(readFileSync('.github/workflows/pages.yml', 'utf8').includes('path: website'));
+        const workflow = readFileSync('.github/workflows/pages.yml', 'utf8');
+        assert.ok(workflow.includes('cp -a website/. dist/'));
+        assert.ok(workflow.includes('publish_dir: ./dist'));
         console.log('Pages passed: desktop/mobile layout, anchors, stylesheet, no login form, and deployment artifact.');
         app.exit(0);
     } catch (error) { console.error(error); app.exit(1); }
