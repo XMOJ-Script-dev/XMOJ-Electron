@@ -1,5 +1,5 @@
 import '../src/style.css';
-import App from '../src/App.vue';
+import App from './App.vue';
 import { installWebApi } from '../src/services/web-api';
 import { createApp } from 'vue';
 import { installRichLinks } from '../src/lib/rich-links';
