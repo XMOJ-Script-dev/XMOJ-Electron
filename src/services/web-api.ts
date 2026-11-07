@@ -1,6 +1,6 @@
 import type { XmojApi } from '../../electron/preload';
 import { SOFTWARE } from '@/shared/software';
-import { XMOJ_ORIGIN, type HomeSnapshot, type LoginRequest, type MonthlyBoard, type ProblemsetPage, type ProblemDetail, type ProblemsetQuery, type StatusPage, type StatusQuery } from '@/shared/types';
+import { XMOJ_ORIGIN, type ContestDetail, type ContestListPage, type ContestProblem, type ContestRank, type HomeSnapshot, type LoginRequest, type MonthlyBoard, type ProblemsetPage, type ProblemDetail, type ProblemsetQuery, type StatusPage, type StatusQuery, type UserProfile } from '@/shared/types';
 
 const EMPTY_SESSION = {
     authenticated: false,
@@ -158,8 +158,8 @@ async function requestSession(method: 'GET' | 'POST' | 'DELETE', body?: unknown)
     return payload;
 }
 
-async function requestJson<T>(path: string): Promise<T> {
-    const response = await fetch(path, { credentials: 'omit' });
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(path, { credentials: 'omit', ...init });
     const payload = await response.json() as T | { error?: string };
     if (!response.ok || (payload && typeof payload === 'object' && 'error' in payload)) {
         throw new Error(
@@ -248,13 +248,47 @@ export function installWebApi(): void {
         problem: {
             detail: async (problemId: number) => cached(await requestJson<ProblemDetail>(`/api/problem?id=${problemId}`)),
         },
-        contest: unavailableSection,
+        contest: {
+            list: async (page = 1) => cached(await requestJson<ContestListPage>(`/api/contest-list?page=${page}`)),
+            detail: async (contestId: number) => cached(await requestJson<ContestDetail>(`/api/contest-detail?id=${contestId}`)),
+            problems: async (contestId: number) => {
+                const detail = await requestJson<ContestDetail>(`/api/contest-detail?id=${contestId}`);
+                return detail.problems.map((problem, index): ContestProblem => ({
+                    index,
+                    label: problem.num,
+                    title: problem.title,
+                    url: problem.problemId
+                        ? `${XMOJ_ORIGIN}/problem.php?id=${problem.problemId}`
+                        : `${XMOJ_ORIGIN}/contest.php?cid=${contestId}`,
+                    problemId: problem.problemId,
+                }));
+            },
+            rank: async (contestId: number, oi: boolean) => requestJson<ContestRank>(
+                `/api/contest-rank?id=${contestId}&oi=${oi}`,
+            ),
+            replay: unavailable,
+        },
         nav: unavailableSection,
-        user: unavailableSection,
+        user: {
+            profile: async (username: string) => requestJson<UserProfile>(
+                `/api/profile?username=${encodeURIComponent(username)}`,
+            ),
+            info: unavailable,
+            exists: unavailable,
+        },
         settings: unavailableSection,
         cache: unavailableSection,
         source: unavailableSection,
-        submit: unavailableSection,
+        submit: {
+            code: (request: Parameters<XmojApi['submit']['code']>[0]) => requestJson<
+                Awaited<ReturnType<XmojApi['submit']['code']>>
+            >('/api/submit', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request),
+            }),
+        },
         status: {
             list: async (query: StatusQuery = {}) => {
                 const params = new URLSearchParams();

@@ -23,7 +23,7 @@ const mainItems = [
 ];
 const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const visibleMainItems = computed(() => webBuild
-    ? mainItems.filter(item => ['home', 'problemset', 'status', 'monthly', 'downloads'].includes(item.id))
+    ? mainItems.filter(item => ['home', 'problemset', 'status', 'contests', 'monthly', 'downloads'].includes(item.id))
     : mainItems);
 const footerItems = [
     { id: 'mail' as ViewId, title: '短消息', icon: Mail },

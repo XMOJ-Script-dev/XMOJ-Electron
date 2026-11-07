@@ -5,13 +5,13 @@ const COOKIE_NAME = '__Host-xmoj-session';
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const COOKIE_OPTIONS = 'Path=/; HttpOnly; Secure; SameSite=Lax';
 
-interface SessionEnvelope {
+export interface SessionEnvelope {
   sessionId: string;
   username: string;
   expiresAt: number;
 }
 
-interface PagesEnv {
+export interface PagesEnv {
   XMOJ_SESSION_KEY?: string;
 }
 
@@ -57,7 +57,7 @@ async function seal(env: PagesEnv, payload: SessionEnvelope): Promise<string> {
   return encodeBase64Url(result);
 }
 
-async function unseal(env: PagesEnv, value: string): Promise<SessionEnvelope | null> {
+export async function unseal(env: PagesEnv, value: string): Promise<SessionEnvelope | null> {
   try {
     const bytes = decodeBase64Url(value);
     if (bytes.length < 29 || bytes.length > 4096) return null;
@@ -85,6 +85,11 @@ function sessionCookie(request: Request): string | null {
   const cookies = request.headers.get('Cookie') ?? '';
   const match = cookies.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([A-Za-z0-9_-]+)(?:;|$)`));
   return match?.[1] ?? null;
+}
+
+export async function readSession(request: Request, env: PagesEnv): Promise<SessionEnvelope | null> {
+  const sealed = sessionCookie(request);
+  return sealed ? unseal(env, sealed) : null;
 }
 
 function json(data: unknown, status = 200, headers?: HeadersInit): Response {
@@ -124,7 +129,7 @@ function upstreamCookie(sessionId: string): string {
 async function verifySession(request: Request, env: PagesEnv): Promise<Response> {
   const sealed = sessionCookie(request);
   if (!sealed) return json(emptySession());
-  const session = await unseal(env, sealed);
+  const session = await readSession(request, env);
   if (!session) return json(emptySession(), 401, { 'Set-Cookie': clearCookie() });
 
   const upstream = await fetch(`${XMOJ_ORIGIN}/loginpage.php`, {

@@ -1,0 +1,97 @@
+import { buildSubmitForm, parseSubmitResponse } from '../../electron/problems.ts';
+import { isAlreadyLoggedInResponse, isLoginGate } from '../../electron/parsers.ts';
+import { readSession, type PagesEnv } from './session.ts';
+
+const XMOJ_ORIGIN = 'https://www.xmoj.tech';
+
+interface PagesContext {
+  request: Request;
+  env: PagesEnv;
+}
+
+function response(data: unknown, status = 200): Response {
+  return Response.json(data, {
+    status,
+    headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
+  });
+}
+
+function sameOrigin(request: Request): boolean {
+  return request.headers.get('Origin') === new URL(request.url).origin;
+}
+
+export async function onRequestPost({ request, env }: PagesContext): Promise<Response> {
+  if (!sameOrigin(request)) return response({ error: 'Invalid request origin' }, 403);
+  const session = await readSession(request, env);
+  if (!session) return response({ error: '登录状态已失效，请重新登录' }, 401);
+
+  let input: Record<string, unknown>;
+  try {
+    const raw = await request.text();
+    if (raw.length > 600_000) return response({ error: '提交内容过大' }, 413);
+    input = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return response({ error: '提交请求格式无效' }, 400);
+  }
+  const problemId = Number(input.problemId);
+  const languageId = Number(input.languageId);
+  const source = typeof input.source === 'string' ? input.source : '';
+  if (
+    !Number.isSafeInteger(problemId) || problemId < 1 || problemId > 1_000_000_000 ||
+    !Number.isSafeInteger(languageId) || languageId < 0 || languageId > 1000 ||
+    !source.trim() || source.length > 512_000
+  ) {
+    return response({ error: '提交信息无效' }, 400);
+  }
+
+  try {
+    const cookie = `PHPSESSID=${session.sessionId}`;
+    const verify = await fetch(`${XMOJ_ORIGIN}/loginpage.php`, {
+      headers: { Cookie: cookie, Accept: 'text/html' },
+      redirect: 'manual',
+    });
+    const verifyHtml = await verify.text();
+    if (!verify.ok || !isAlreadyLoggedInResponse(verifyHtml) || isLoginGate(verifyHtml)) {
+      return response({ error: '登录状态已失效，请重新登录' }, 401);
+    }
+
+    const form = buildSubmitForm({
+      problemId,
+      languageId,
+      source,
+      enableO2: input.enableO2 === true,
+    });
+    let result = await fetch(`${XMOJ_ORIGIN}/submit.php`, {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        Accept: 'text/html',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(form),
+      redirect: 'manual',
+    });
+    if (result.status >= 300 && result.status < 400) {
+      const location = result.headers.get('Location');
+      if (!location) return response({ error: '提交响应无效' }, 502);
+      const destination = new URL(location, XMOJ_ORIGIN);
+      if (destination.origin !== XMOJ_ORIGIN) return response({ error: '提交响应目标无效' }, 502);
+      result = await fetch(destination, {
+        headers: { Cookie: cookie, Accept: 'text/html' },
+        redirect: 'manual',
+      });
+    }
+    const html = await result.text();
+    const solutionId = result.ok ? parseSubmitResponse(html) : null;
+    if (solutionId === null) {
+      return response({
+        ok: false,
+        solutionId: null,
+        message: '提交失败，服务器未返回提交编号',
+      }, 502);
+    }
+    return response({ ok: true, solutionId, message: '提交成功' });
+  } catch {
+    return response({ error: '提交服务暂时不可用' }, 502);
+  }
+}

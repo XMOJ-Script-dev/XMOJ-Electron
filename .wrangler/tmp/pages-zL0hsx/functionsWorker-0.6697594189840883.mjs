@@ -928,48 +928,90 @@ var process_default = _process;
 // ../../../../.npm/_npx/c943b712072b77c4/node_modules/wrangler/_virtual_unenv_global_polyfill-@cloudflare-unenv-preset-node-process
 globalThis.process = process_default;
 
-// api/_shared.ts
+// api/contest-detail.ts
 var XMOJ_ORIGIN = "https://www.xmoj.tech";
-async function getPublicPage(request, path, label) {
-  if (request.method !== "GET") {
-    return Response.json({ error: "Method not allowed" }, { status: 405 });
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+__name(isRecord, "isRecord");
+async function onRequestGet({ request }) {
+  const rawId = new URL(request.url).searchParams.get("id") ?? "";
+  if (!/^\d{1,10}$/.test(rawId) || Number(rawId) < 1) {
+    return Response.json({ error: "\u65E0\u6548\u7684\u6BD4\u8D5B\u7F16\u53F7" }, { status: 400 });
   }
   try {
-    const upstream = await fetch(new URL(path, XMOJ_ORIGIN), {
-      headers: { Accept: "text/html" },
+    const response2 = await fetch(`${XMOJ_ORIGIN}/api/contest/${rawId}/A`, {
+      headers: { Accept: "application/json" },
       redirect: "manual",
       signal: request.signal
     });
-    if (!upstream.ok || !upstream.headers.get("content-type")?.includes("text/html")) {
-      return Response.json({ error: label }, {
+    if (!response2.ok || !response2.headers.get("content-type")?.includes("json")) {
+      return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6BD4\u8D5B\u4FE1\u606F" }, {
         status: 502,
         headers: { "Cache-Control": "no-store" }
       });
     }
-    return Response.json({ html: await upstream.text(), serverTime: Date.now() }, {
-      headers: {
-        "Cache-Control": "public, max-age=60, s-maxage=300",
-        "X-Content-Type-Options": "nosniff"
-      }
+    const raw = await response2.json();
+    if (!isRecord(raw) || !isRecord(raw.contest)) {
+      return Response.json({ error: "\u6BD4\u8D5B\u4FE1\u606F\u683C\u5F0F\u65E0\u6548" }, { status: 502 });
+    }
+    const problems = Array.isArray(raw.problems) ? raw.problems : [];
+    return Response.json({
+      contest: raw.contest,
+      problems: problems.map((problem) => {
+        const id = typeof problem.problemId === "string" ? Number.parseInt(problem.problemId, 10) : typeof problem.problemId === "number" ? problem.problemId : null;
+        return {
+          num: String(problem.num ?? "").toUpperCase(),
+          problemId: id !== null && Number.isFinite(id) ? id : null,
+          title: String(problem.problemTitle ?? problem.title ?? "").trim(),
+          status: problem.myStatus ? String(problem.myStatus) : null
+        };
+      }),
+      myRole: typeof raw.myRole === "string" ? raw.myRole : null,
+      canExport: Boolean(raw.canExport),
+      submitUrl: typeof raw.submitUrl === "string" ? raw.submitUrl : null
+    }, {
+      headers: { "Cache-Control": "public, max-age=60, s-maxage=300" }
     });
   } catch {
-    return Response.json({ error: label }, {
+    return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6BD4\u8D5B\u4FE1\u606F" }, {
       status: 502,
       headers: { "Cache-Control": "no-store" }
     });
   }
 }
-__name(getPublicPage, "getPublicPage");
-
-// api/home.ts
-function onRequestGet({ request }) {
-  return getPublicPage(request, "/", "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u5C0F\u660E OJ \u9996\u9875");
-}
 __name(onRequestGet, "onRequestGet");
 
-// api/monthly.ts
-function onRequestGet2({ request }) {
-  return getPublicPage(request, "/open_contest.php", "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6708\u8D5B\u4FE1\u606F");
+// api/contest-list.ts
+var XMOJ_ORIGIN2 = "https://www.xmoj.tech";
+async function onRequestGet2({ request }) {
+  const rawPage = new URL(request.url).searchParams.get("page") ?? "1";
+  if (!/^\d{1,3}$/.test(rawPage) || Number(rawPage) < 1 || Number(rawPage) > 100) {
+    return Response.json({ error: "\u65E0\u6548\u7684\u6BD4\u8D5B\u9875\u7801" }, { status: 400 });
+  }
+  const upstreamUrl = new URL("/api/contest/list", XMOJ_ORIGIN2);
+  upstreamUrl.searchParams.set("pageNum", rawPage);
+  try {
+    const response2 = await fetch(upstreamUrl, {
+      headers: { Accept: "application/json" },
+      redirect: "manual",
+      signal: request.signal
+    });
+    if (!response2.ok || !response2.headers.get("content-type")?.includes("json")) {
+      return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6BD4\u8D5B\u5217\u8868" }, {
+        status: 502,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+    return Response.json(await response2.json(), {
+      headers: { "Cache-Control": "public, max-age=60, s-maxage=300" }
+    });
+  } catch {
+    return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6BD4\u8D5B\u5217\u8868" }, {
+      status: 502,
+      headers: { "Cache-Control": "no-store" }
+    });
+  }
 }
 __name(onRequestGet2, "onRequestGet");
 
@@ -5323,7 +5365,7 @@ parse.TextNode = TextNode;
 parse.NodeType = NodeType;
 
 // ../src/shared/types.ts
-var XMOJ_ORIGIN2 = "https://www.xmoj.tech";
+var XMOJ_ORIGIN3 = "https://www.xmoj.tech";
 
 // ../electron/parsers.ts
 function normaliseText(input) {
@@ -5335,7 +5377,7 @@ __name(normaliseText, "normaliseText");
 function normalizeAssetUrls(html) {
   if (!html)
     return html;
-  return html.replace(/(\s(?:src|href)\s*=\s*)(["'])(\/uploads?\/[^"']*)\2/gi, (_match, prefix, quote, assetPath) => `${prefix}${quote}${XMOJ_ORIGIN2}${assetPath}${quote}`);
+  return html.replace(/(\s(?:src|href)\s*=\s*)(["'])(\/uploads?\/[^"']*)\2/gi, (_match, prefix, quote, assetPath) => `${prefix}${quote}${XMOJ_ORIGIN3}${assetPath}${quote}`);
 }
 __name(normalizeAssetUrls, "normalizeAssetUrls");
 function sanitizeHtml(html) {
@@ -5538,7 +5580,7 @@ function parseProblemsetPage(html, requestedPage = 1) {
     problems.push({
       id,
       title: title2,
-      url: `${XMOJ_ORIGIN2}/problem.php?id=${id}`,
+      url: `${XMOJ_ORIGIN3}/problem.php?id=${id}`,
       accepted,
       submissions,
       solved,
@@ -5860,7 +5902,7 @@ function parseStatusPage(html) {
       verdictText: verdictText || described.label,
       problemId,
       problemTitle: problemTitle || (problemId !== null ? `\u9898\u76EE ${problemId}` : ""),
-      problemUrl: problemId !== null ? `${XMOJ_ORIGIN2}/problem.php?id=${problemId}` : null,
+      problemUrl: problemId !== null ? `${XMOJ_ORIGIN3}/problem.php?id=${problemId}` : null,
       user,
       memoryKb,
       timeMs,
@@ -5884,6 +5926,135 @@ function extractSubmissionId(href) {
   return match2 ? Number.parseInt(match2[1], 10) : null;
 }
 __name(extractSubmissionId, "extractSubmissionId");
+
+// ../electron/rank.ts
+function parseContestRank(html, contestId, oi) {
+  const root = parse(html);
+  const table3 = root.querySelector("table");
+  const title2 = normaliseText(root.querySelector("h2, h3, .title")?.textContent ?? "").replace(/^OI Mode RankList\s*--\s*/, "").trim();
+  if (!table3) {
+    return { contestId, title: title2, oi, headers: [], rows: [] };
+  }
+  const trs = table3.querySelectorAll("tr");
+  if (trs.length === 0)
+    return { contestId, title: title2, oi, headers: [], rows: [] };
+  const headerCells = trs[0].querySelectorAll("th, td").map((cell) => normaliseText(cell.textContent ?? ""));
+  const problemCount = Math.max(0, headerCells.length - 5);
+  const headers = headerCells.slice(5);
+  const rows = [];
+  for (const tr of trs.slice(1)) {
+    const cells = tr.querySelectorAll("th, td");
+    if (cells.length < 5)
+      continue;
+    const text = /* @__PURE__ */ __name((index) => normaliseText(cells[index]?.textContent ?? ""), "text");
+    const rankRaw = text(0);
+    const parsedRank = Number.parseInt(rankRaw, 10);
+    const rank = Number.isFinite(parsedRank) ? parsedRank : null;
+    const rankText = Number.isFinite(parsedRank) ? null : rankRaw || null;
+    const solved = Number.parseInt(text(3), 10);
+    const score = Number.parseInt(text(4), 10);
+    const problemCells = [];
+    for (let i = 0; i < problemCount; i++) {
+      const cell = cells[5 + i];
+      const value = normaliseText(cell?.textContent ?? "");
+      const style = cell?.getAttribute("style") ?? "";
+      const accepted = /#(00ff00|53ff53)/i.test(style);
+      problemCells.push({ text: value, accepted });
+    }
+    rows.push({
+      rank,
+      rankText,
+      userId: text(1),
+      nick: text(2),
+      solved: Number.isFinite(solved) ? solved : 0,
+      score: Number.isFinite(score) ? score : 0,
+      cells: problemCells
+    });
+  }
+  return { contestId, title: title2, oi, headers, rows };
+}
+__name(parseContestRank, "parseContestRank");
+
+// api/contest-rank.ts
+var XMOJ_ORIGIN4 = "https://www.xmoj.tech";
+async function onRequestGet3({ request }) {
+  const input = new URL(request.url).searchParams;
+  const rawId = input.get("id") ?? "";
+  const oi = input.get("oi") === "true";
+  if (!/^\d{1,10}$/.test(rawId) || Number(rawId) < 1) {
+    return Response.json({ error: "\u65E0\u6548\u7684\u6BD4\u8D5B\u7F16\u53F7" }, { status: 400 });
+  }
+  const path = oi ? "contestrank-oi.php" : "contestrank-correct.php";
+  const upstreamUrl = new URL(`/${path}`, XMOJ_ORIGIN4);
+  upstreamUrl.searchParams.set("cid", rawId);
+  try {
+    const response2 = await fetch(upstreamUrl, {
+      headers: { Accept: "text/html" },
+      redirect: "manual",
+      signal: request.signal
+    });
+    if (!response2.ok || !response2.headers.get("content-type")?.includes("text/html")) {
+      return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6BD4\u8D5B\u6392\u540D" }, {
+        status: 502,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+    return Response.json(parseContestRank(await response2.text(), Number(rawId), oi), {
+      headers: { "Cache-Control": "public, max-age=30, s-maxage=60" }
+    });
+  } catch {
+    return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6BD4\u8D5B\u6392\u540D" }, {
+      status: 502,
+      headers: { "Cache-Control": "no-store" }
+    });
+  }
+}
+__name(onRequestGet3, "onRequestGet");
+
+// api/_shared.ts
+var XMOJ_ORIGIN5 = "https://www.xmoj.tech";
+async function getPublicPage(request, path, label) {
+  if (request.method !== "GET") {
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
+  }
+  try {
+    const upstream = await fetch(new URL(path, XMOJ_ORIGIN5), {
+      headers: { Accept: "text/html" },
+      redirect: "manual",
+      signal: request.signal
+    });
+    if (!upstream.ok || !upstream.headers.get("content-type")?.includes("text/html")) {
+      return Response.json({ error: label }, {
+        status: 502,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+    return Response.json({ html: await upstream.text(), serverTime: Date.now() }, {
+      headers: {
+        "Cache-Control": "public, max-age=60, s-maxage=300",
+        "X-Content-Type-Options": "nosniff"
+      }
+    });
+  } catch {
+    return Response.json({ error: label }, {
+      status: 502,
+      headers: { "Cache-Control": "no-store" }
+    });
+  }
+}
+__name(getPublicPage, "getPublicPage");
+
+// api/home.ts
+function onRequestGet4({ request }) {
+  return getPublicPage(request, "/", "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u5C0F\u660E OJ \u9996\u9875");
+}
+__name(onRequestGet4, "onRequestGet");
+
+// api/monthly.ts
+function onRequestGet5({ request }) {
+  return getPublicPage(request, "/open_contest.php", "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u6708\u8D5B\u4FE1\u606F");
+}
+__name(onRequestGet5, "onRequestGet");
 
 // ../electron/problems.ts
 function decodeEntities(value) {
@@ -6095,9 +6266,40 @@ function parseProblemDetail(html, problemId) {
   };
 }
 __name(parseProblemDetail, "parseProblemDetail");
+function parseSubmitResponse(body) {
+  const patterns = [
+    /solution_id\s*=\s*(\d+)/i,
+    /sid=(\d+)/i,
+    /status\.php\?[^"'\s]*id=(\d+)/i,
+    /reinfo\.php\?sid=(\d+)/i
+  ];
+  for (const pattern of patterns) {
+    const match2 = body.match(pattern);
+    if (match2)
+      return Number.parseInt(match2[1], 10);
+  }
+  return null;
+}
+__name(parseSubmitResponse, "parseSubmitResponse");
+function buildSubmitForm(request) {
+  const form = {
+    language: String(request.languageId),
+    source: request.source
+  };
+  if (request.contestId !== void 0 && request.contestPid !== void 0) {
+    form.cid = String(request.contestId);
+    form.pid = String(request.contestPid);
+  } else if (request.problemId !== void 0) {
+    form.id = String(request.problemId);
+  }
+  if (request.enableO2)
+    form.enable_O2 = "on";
+  return form;
+}
+__name(buildSubmitForm, "buildSubmitForm");
 
 // api/problem.ts
-var XMOJ_ORIGIN3 = "https://www.xmoj.tech";
+var XMOJ_ORIGIN6 = "https://www.xmoj.tech";
 function error3(message, status) {
   return Response.json({ error: message }, {
     status,
@@ -6105,7 +6307,7 @@ function error3(message, status) {
   });
 }
 __name(error3, "error");
-async function onRequestGet3({ request }) {
+async function onRequestGet6({ request }) {
   const rawId = new URL(request.url).searchParams.get("id") ?? "";
   if (!/^\d{1,10}$/.test(rawId)) return error3("\u65E0\u6548\u7684\u9898\u76EE\u7F16\u53F7", 400);
   const problemId = Number(rawId);
@@ -6113,19 +6315,19 @@ async function onRequestGet3({ request }) {
     return error3("\u65E0\u6548\u7684\u9898\u76EE\u7F16\u53F7", 400);
   }
   try {
-    const problemUrl = new URL("/problem.php", XMOJ_ORIGIN3);
+    const problemUrl = new URL("/problem.php", XMOJ_ORIGIN6);
     problemUrl.searchParams.set("id", String(problemId));
-    const response = await fetch(problemUrl, {
+    const response2 = await fetch(problemUrl, {
       headers: { Accept: "text/html" },
       redirect: "manual",
       signal: request.signal
     });
-    if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) {
+    if (!response2.ok || !response2.headers.get("content-type")?.includes("text/html")) {
       return error3("\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u9898\u76EE", 502);
     }
-    const detail = parseProblemDetail(await response.text(), problemId);
+    const detail = parseProblemDetail(await response2.text(), problemId);
     try {
-      const submitUrl = new URL("/submitpage.php", XMOJ_ORIGIN3);
+      const submitUrl = new URL("/submitpage.php", XMOJ_ORIGIN6);
       submitUrl.searchParams.set("id", String(problemId));
       const submitPage = await fetch(submitUrl, {
         headers: { Accept: "text/html" },
@@ -6145,10 +6347,10 @@ async function onRequestGet3({ request }) {
     return error3("\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u9898\u76EE", 502);
   }
 }
-__name(onRequestGet3, "onRequestGet");
+__name(onRequestGet6, "onRequestGet");
 
 // api/problemset.ts
-var XMOJ_ORIGIN4 = "https://www.xmoj.tech";
+var XMOJ_ORIGIN7 = "https://www.xmoj.tech";
 var MAX_PAGES = 40;
 var PAGE_DELAY_MS = 100;
 function error4(message, status) {
@@ -6158,25 +6360,25 @@ function error4(message, status) {
   });
 }
 __name(error4, "error");
-async function onRequestGet4({ request }) {
+async function onRequestGet7({ request }) {
   const search = new URL(request.url).searchParams.get("search")?.trim() ?? "";
   if (search.length > 100) return error4("\u641C\u7D22\u5185\u5BB9\u8FC7\u957F", 400);
   try {
     const problems = [];
     let totalPages = 1;
     for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
-      const url = new URL("/problemset.php", XMOJ_ORIGIN4);
+      const url = new URL("/problemset.php", XMOJ_ORIGIN7);
       url.searchParams.set("page", String(page));
       if (search) url.searchParams.set("search", search);
-      const response = await fetch(url, {
+      const response2 = await fetch(url, {
         headers: { Accept: "text/html" },
         redirect: "manual",
         signal: request.signal
       });
-      if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) {
+      if (!response2.ok || !response2.headers.get("content-type")?.includes("text/html")) {
         return error4("\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u9898\u5E93", 502);
       }
-      const parsed = parseProblemsetPage(await response.text(), page);
+      const parsed = parseProblemsetPage(await response2.text(), page);
       problems.push(...parsed.problems);
       if (page === 1) totalPages = Math.max(1, Math.min(parsed.totalPages ?? 1, MAX_PAGES));
       if (!parsed.problems.length) break;
@@ -6193,10 +6395,113 @@ async function onRequestGet4({ request }) {
     return error4("\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u9898\u5E93", 502);
   }
 }
-__name(onRequestGet4, "onRequestGet");
+__name(onRequestGet7, "onRequestGet");
+
+// ../electron/profile.ts
+function parseSolvedProblems(html) {
+  const problems = [];
+  const seen = /* @__PURE__ */ new Set();
+  const call = /p\(\s*(\d+)\s*,\s*(\d+)\s*\)/g;
+  let match2;
+  while ((match2 = call.exec(html)) !== null) {
+    const id = Number.parseInt(match2[1], 10);
+    if (seen.has(id))
+      continue;
+    seen.add(id);
+    problems.push({
+      id,
+      attempts: Number.parseInt(match2[2], 10),
+      url: `${XMOJ_ORIGIN3}/problem.php?id=${id}`
+    });
+  }
+  return problems;
+}
+__name(parseSolvedProblems, "parseSolvedProblems");
+function parseUserProfile(html, username) {
+  const root = parse(html);
+  const text = normaliseText(root.querySelector(".container")?.textContent ?? html);
+  const headerMatch = text.match(new RegExp(`${escapeRegExp(username)}\\s*-{2}\\s*([^\\s\u77ED]+)`));
+  const nick = headerMatch ? headerMatch[1].trim() : "";
+  const solvedMatch = text.match(/解决\s*(\d+)/);
+  const solvedTotal = solvedMatch ? Number.parseInt(solvedMatch[1], 10) : null;
+  const problems = parseSolvedProblems(html);
+  const statistics = root.querySelectorAll("#statics tr").flatMap((row) => {
+    const cells = row.querySelectorAll("td");
+    const label = normaliseText(cells[0]?.textContent);
+    const link = cells[1]?.querySelector('a[href*="jresult="]');
+    const verdict = Number(link?.getAttribute("href")?.match(/jresult=(\d+)/)?.[1]);
+    const count3 = Number(link?.textContent.trim());
+    return link && !/^(解决|Solved)/i.test(label) && Number.isFinite(verdict) && Number.isFinite(count3) ? [{ label, count: count3, verdict }] : [];
+  });
+  const series = [/* @__PURE__ */ new Map(), /* @__PURE__ */ new Map()];
+  for (const match2 of html.matchAll(/\bd([12])\.push\(\s*\[\s*(\d+)\s*,\s*(\d+)\s*\]\s*\)/g)) {
+    const timestamp = Number(match2[2]), count3 = Number(match2[3]);
+    if (Number.isSafeInteger(timestamp) && timestamp > 0 && timestamp <= 864e13 && Number.isSafeInteger(count3)) series[Number(match2[1]) - 1].set(timestamp, count3);
+  }
+  const activity = [.../* @__PURE__ */ new Set([...series[0].keys(), ...series[1].keys()])].sort((a, b) => a - b).map((timestamp) => ({ timestamp, submitted: series[0].get(timestamp) ?? 0, accepted: series[1].get(timestamp) ?? 0 }));
+  const failures = statistics.filter((s) => s.verdict >= 5 && s.verdict <= 10).reduce((sum, s) => sum + s.count, 0);
+  const solved = problems.length;
+  let totalAC = 0, cappedAC = 0;
+  for (const count3 of series[1].values()) {
+    totalAC += count3;
+    cappedAC += count3 <= 8 ? count3 : 8 + 8 * Math.log(1 + (count3 - 8) / 8);
+  }
+  const volume = 1 - Math.exp(-solved * (totalAC > 0 ? cappedAC / totalAC : 1) / 350);
+  const precision = (solved + 10) / (solved + failures + 40);
+  const accuracy = precision < 0.15 ? 0 : precision < 0.4 ? (precision - 0.15) / 0.25 : precision < 0.55 ? 1 : Math.max(0.3, 1 - (precision - 0.55) * 2);
+  const rating = solved ? Math.round(3e3 * Math.pow(0.57 * volume + 0.33 * accuracy * solved / (solved + 80) + 0.1 * (1 - Math.exp(-series[0].size / 250)), 0.9)) : 0;
+  return {
+    rating,
+    statistics,
+    activity,
+    username,
+    nick,
+    solvedTotal: solvedTotal ?? problems.length,
+    problems,
+    profileUrl: `${XMOJ_ORIGIN3}/userinfo.php?user=${encodeURIComponent(username)}`
+  };
+}
+__name(parseUserProfile, "parseUserProfile");
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+__name(escapeRegExp, "escapeRegExp");
+
+// api/profile.ts
+var XMOJ_ORIGIN8 = "https://www.xmoj.tech";
+async function onRequestGet8({ request }) {
+  const username = new URL(request.url).searchParams.get("username")?.trim() ?? "";
+  if (!username || username.length > 128 || /[\u0000-\u001f\u007f]/.test(username)) {
+    return Response.json({ error: "\u65E0\u6548\u7684\u7528\u6237\u540D" }, { status: 400 });
+  }
+  const upstreamUrl = new URL("/userinfo.php", XMOJ_ORIGIN8);
+  upstreamUrl.searchParams.set("user", username);
+  try {
+    const response2 = await fetch(upstreamUrl, {
+      headers: { Accept: "text/html" },
+      redirect: "manual",
+      signal: request.signal
+    });
+    if (!response2.ok || !response2.headers.get("content-type")?.includes("text/html")) {
+      return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u7528\u6237\u4E3B\u9875" }, {
+        status: 502,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+    return Response.json(parseUserProfile(await response2.text(), username), {
+      headers: { "Cache-Control": "public, max-age=60, s-maxage=300" }
+    });
+  } catch {
+    return Response.json({ error: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u7528\u6237\u4E3B\u9875" }, {
+      status: 502,
+      headers: { "Cache-Control": "no-store" }
+    });
+  }
+}
+__name(onRequestGet8, "onRequestGet");
 
 // api/status.ts
-var XMOJ_ORIGIN5 = "https://www.xmoj.tech";
+var XMOJ_ORIGIN9 = "https://www.xmoj.tech";
 function error5(message, status) {
   return Response.json({ error: message }, {
     status,
@@ -6204,7 +6509,7 @@ function error5(message, status) {
   });
 }
 __name(error5, "error");
-async function onRequestGet5({ request }) {
+async function onRequestGet9({ request }) {
   const input = new URL(request.url).searchParams;
   const query = new URLSearchParams();
   for (const [source, target] of [
@@ -6225,27 +6530,27 @@ async function onRequestGet5({ request }) {
     query.set(target, value);
   }
   try {
-    const upstreamUrl = new URL("/status.php", XMOJ_ORIGIN5);
+    const upstreamUrl = new URL("/status.php", XMOJ_ORIGIN9);
     upstreamUrl.search = query.toString();
-    const response = await fetch(upstreamUrl, {
+    const response2 = await fetch(upstreamUrl, {
       headers: { Accept: "text/html" },
       redirect: "manual",
       signal: request.signal
     });
-    if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) {
+    if (!response2.ok || !response2.headers.get("content-type")?.includes("text/html")) {
       return error5("\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u8BC4\u6D4B\u8BB0\u5F55", 502);
     }
-    return Response.json(parseStatusPage(await response.text()), {
+    return Response.json(parseStatusPage(await response2.text()), {
       headers: { "Cache-Control": "public, max-age=15, s-maxage=30", "X-Content-Type-Options": "nosniff" }
     });
   } catch {
     return error5("\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u8BC4\u6D4B\u8BB0\u5F55", 502);
   }
 }
-__name(onRequestGet5, "onRequestGet");
+__name(onRequestGet9, "onRequestGet");
 
 // api/session.ts
-var XMOJ_ORIGIN6 = "https://www.xmoj.tech";
+var XMOJ_ORIGIN10 = "https://www.xmoj.tech";
 var COOKIE_NAME = "__Host-xmoj-session";
 var SESSION_TTL_SECONDS = 8 * 60 * 60;
 var COOKIE_OPTIONS = "Path=/; HttpOnly; Secure; SameSite=Lax";
@@ -6309,6 +6614,11 @@ function sessionCookie(request) {
   return match2?.[1] ?? null;
 }
 __name(sessionCookie, "sessionCookie");
+async function readSession(request, env2) {
+  const sealed = sessionCookie(request);
+  return sealed ? unseal(env2, sealed) : null;
+}
+__name(readSession, "readSession");
 function json(data, status = 200, headers) {
   return Response.json(data, {
     status,
@@ -6346,9 +6656,9 @@ __name(upstreamCookie, "upstreamCookie");
 async function verifySession(request, env2) {
   const sealed = sessionCookie(request);
   if (!sealed) return json(emptySession());
-  const session = await unseal(env2, sealed);
+  const session = await readSession(request, env2);
   if (!session) return json(emptySession(), 401, { "Set-Cookie": clearCookie() });
-  const upstream = await fetch(`${XMOJ_ORIGIN6}/loginpage.php`, {
+  const upstream = await fetch(`${XMOJ_ORIGIN10}/loginpage.php`, {
     headers: { Cookie: upstreamCookie(session.sessionId), Accept: "text/html" },
     redirect: "manual"
   }).catch(() => null);
@@ -6382,7 +6692,7 @@ async function login(request, env2) {
   }
   try {
     await getKey(env2);
-    const response = await fetch(`${XMOJ_ORIGIN6}/login.php`, {
+    const response2 = await fetch(`${XMOJ_ORIGIN10}/login.php`, {
       method: "POST",
       headers: {
         Accept: "text/html",
@@ -6396,13 +6706,13 @@ async function login(request, env2) {
       }),
       redirect: "manual"
     });
-    const setCookies = response.headers.getSetCookie?.() ?? [response.headers.get("set-cookie") ?? ""];
+    const setCookies = response2.headers.getSetCookie?.() ?? [response2.headers.get("set-cookie") ?? ""];
     const sessionId = setCookies.map((value) => value.match(/(?:^|,\s*)PHPSESSID=([^;,\s]+)/)?.[1]).find((value) => Boolean(value && /^[A-Za-z0-9._~-]{1,256}$/.test(value)));
-    const html = await response.text();
+    const html = await response2.text();
     const alert = parseLoginAlert(html);
     if (isLoginFailureAlert(alert)) return json({ error: alert }, 401);
     if (!sessionId) return json({ error: "\u767B\u5F55\u5931\u8D25\uFF1A\u670D\u52A1\u5668\u672A\u4E0B\u53D1\u4F1A\u8BDD Cookie" }, 401);
-    const verification = await fetch(`${XMOJ_ORIGIN6}/loginpage.php`, {
+    const verification = await fetch(`${XMOJ_ORIGIN10}/loginpage.php`, {
       headers: { Cookie: upstreamCookie(sessionId), Accept: "text/html" },
       redirect: "manual"
     });
@@ -6410,7 +6720,7 @@ async function login(request, env2) {
     if (!verification.ok || !isAlreadyLoggedInResponse(verificationHtml) || isLoginGate(verificationHtml)) {
       return json({ error: "\u767B\u5F55\u72B6\u6001\u672A\u80FD\u786E\u8BA4\uFF0C\u8BF7\u68C0\u67E5\u7528\u6237\u540D\u4E0E\u5BC6\u7801" }, 401);
     }
-    const profileResponse = await fetch(`${XMOJ_ORIGIN6}/index.php`, {
+    const profileResponse = await fetch(`${XMOJ_ORIGIN10}/index.php`, {
       headers: { Cookie: upstreamCookie(sessionId), Accept: "text/html" },
       redirect: "manual"
     });
@@ -6440,7 +6750,7 @@ async function logout(request, env2) {
   if (sealed) {
     const session = await unseal(env2, sealed);
     if (session) {
-      await fetch(`${XMOJ_ORIGIN6}/logout.php`, {
+      await fetch(`${XMOJ_ORIGIN10}/logout.php`, {
         headers: { Cookie: upstreamCookie(session.sessionId) },
         redirect: "manual"
       }).catch(() => void 0);
@@ -6457,42 +6767,160 @@ async function onRequest({ request, env: env2 }) {
 }
 __name(onRequest, "onRequest");
 
+// api/submit.ts
+var XMOJ_ORIGIN11 = "https://www.xmoj.tech";
+function response(data, status = 200) {
+  return Response.json(data, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }
+  });
+}
+__name(response, "response");
+function sameOrigin(request) {
+  return request.headers.get("Origin") === new URL(request.url).origin;
+}
+__name(sameOrigin, "sameOrigin");
+async function onRequestPost({ request, env: env2 }) {
+  if (!sameOrigin(request)) return response({ error: "Invalid request origin" }, 403);
+  const session = await readSession(request, env2);
+  if (!session) return response({ error: "\u767B\u5F55\u72B6\u6001\u5DF2\u5931\u6548\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55" }, 401);
+  let input;
+  try {
+    const raw = await request.text();
+    if (raw.length > 6e5) return response({ error: "\u63D0\u4EA4\u5185\u5BB9\u8FC7\u5927" }, 413);
+    input = JSON.parse(raw);
+  } catch {
+    return response({ error: "\u63D0\u4EA4\u8BF7\u6C42\u683C\u5F0F\u65E0\u6548" }, 400);
+  }
+  const problemId = Number(input.problemId);
+  const languageId = Number(input.languageId);
+  const source = typeof input.source === "string" ? input.source : "";
+  if (!Number.isSafeInteger(problemId) || problemId < 1 || problemId > 1e9 || !Number.isSafeInteger(languageId) || languageId < 0 || languageId > 1e3 || !source.trim() || source.length > 512e3) {
+    return response({ error: "\u63D0\u4EA4\u4FE1\u606F\u65E0\u6548" }, 400);
+  }
+  try {
+    const cookie = `PHPSESSID=${session.sessionId}`;
+    const verify = await fetch(`${XMOJ_ORIGIN11}/loginpage.php`, {
+      headers: { Cookie: cookie, Accept: "text/html" },
+      redirect: "manual"
+    });
+    const verifyHtml = await verify.text();
+    if (!verify.ok || !isAlreadyLoggedInResponse(verifyHtml) || isLoginGate(verifyHtml)) {
+      return response({ error: "\u767B\u5F55\u72B6\u6001\u5DF2\u5931\u6548\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55" }, 401);
+    }
+    const form = buildSubmitForm({
+      problemId,
+      languageId,
+      source,
+      enableO2: input.enableO2 === true
+    });
+    let result = await fetch(`${XMOJ_ORIGIN11}/submit.php`, {
+      method: "POST",
+      headers: {
+        Cookie: cookie,
+        Accept: "text/html",
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams(form),
+      redirect: "manual"
+    });
+    if (result.status >= 300 && result.status < 400) {
+      const location = result.headers.get("Location");
+      if (!location) return response({ error: "\u63D0\u4EA4\u54CD\u5E94\u65E0\u6548" }, 502);
+      const destination = new URL(location, XMOJ_ORIGIN11);
+      if (destination.origin !== XMOJ_ORIGIN11) return response({ error: "\u63D0\u4EA4\u54CD\u5E94\u76EE\u6807\u65E0\u6548" }, 502);
+      result = await fetch(destination, {
+        headers: { Cookie: cookie, Accept: "text/html" },
+        redirect: "manual"
+      });
+    }
+    const html = await result.text();
+    const solutionId = result.ok ? parseSubmitResponse(html) : null;
+    if (solutionId === null) {
+      return response({
+        ok: false,
+        solutionId: null,
+        message: "\u63D0\u4EA4\u5931\u8D25\uFF0C\u670D\u52A1\u5668\u672A\u8FD4\u56DE\u63D0\u4EA4\u7F16\u53F7"
+      }, 502);
+    }
+    return response({ ok: true, solutionId, message: "\u63D0\u4EA4\u6210\u529F" });
+  } catch {
+    return response({ error: "\u63D0\u4EA4\u670D\u52A1\u6682\u65F6\u4E0D\u53EF\u7528" }, 502);
+  }
+}
+__name(onRequestPost, "onRequestPost");
+
 // ../.wrangler/tmp/pages-zL0hsx/functionsRoutes-0.060824791928945965.mjs
 var routes = [
   {
-    routePath: "/api/home",
+    routePath: "/api/contest-detail",
     mountPath: "/api",
     method: "GET",
     middlewares: [],
     modules: [onRequestGet]
   },
   {
-    routePath: "/api/monthly",
+    routePath: "/api/contest-list",
     mountPath: "/api",
     method: "GET",
     middlewares: [],
     modules: [onRequestGet2]
   },
   {
-    routePath: "/api/problem",
+    routePath: "/api/contest-rank",
     mountPath: "/api",
     method: "GET",
     middlewares: [],
     modules: [onRequestGet3]
   },
   {
-    routePath: "/api/problemset",
+    routePath: "/api/home",
     mountPath: "/api",
     method: "GET",
     middlewares: [],
     modules: [onRequestGet4]
   },
   {
-    routePath: "/api/status",
+    routePath: "/api/monthly",
     mountPath: "/api",
     method: "GET",
     middlewares: [],
     modules: [onRequestGet5]
+  },
+  {
+    routePath: "/api/problem",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet6]
+  },
+  {
+    routePath: "/api/problemset",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet7]
+  },
+  {
+    routePath: "/api/profile",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet8]
+  },
+  {
+    routePath: "/api/status",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet9]
+  },
+  {
+    routePath: "/api/submit",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost]
   },
   {
     routePath: "/api/session",
@@ -6933,35 +7361,35 @@ var pages_template_worker_default = {
             isFailOpen = true;
           }, "passThroughOnException")
         };
-        const response = await handler(context2);
-        if (!(response instanceof Response)) {
+        const response2 = await handler(context2);
+        if (!(response2 instanceof Response)) {
           throw new Error("Your Pages function should return a Response");
         }
-        return cloneResponse(response);
+        return cloneResponse(response2);
       } else if ("ASSETS") {
-        const response = await env2["ASSETS"].fetch(request);
-        return cloneResponse(response);
+        const response2 = await env2["ASSETS"].fetch(request);
+        return cloneResponse(response2);
       } else {
-        const response = await fetch(request);
-        return cloneResponse(response);
+        const response2 = await fetch(request);
+        return cloneResponse(response2);
       }
     }, "next");
     try {
       return await next();
     } catch (error6) {
       if (isFailOpen) {
-        const response = await env2["ASSETS"].fetch(request);
-        return cloneResponse(response);
+        const response2 = await env2["ASSETS"].fetch(request);
+        return cloneResponse(response2);
       }
       throw error6;
     }
   }
 };
-var cloneResponse = /* @__PURE__ */ __name((response) => (
+var cloneResponse = /* @__PURE__ */ __name((response2) => (
   // https://fetch.spec.whatwg.org/#null-body-status
   new Response(
-    [101, 204, 205, 304].includes(response.status) ? null : response.body,
-    response
+    [101, 204, 205, 304].includes(response2.status) ? null : response2.body,
+    response2
   )
 ), "cloneResponse");
 
@@ -7012,7 +7440,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env2, _ctx, middlewareCtx
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-zGyNnv/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-m7yUgI/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -7044,7 +7472,7 @@ function __facade_invoke__(request, env2, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-zGyNnv/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-m7yUgI/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
