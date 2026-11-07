@@ -138,3 +138,9 @@ export function sendMail(toUser: string, content: string): Promise<unknown> {
 export function pollNotices(): Promise<CommunityNotification[]> {
     return window.xmoj.notices.poll();
 }
+export function markMailMentionRead(mentionId: number): Promise<unknown> {
+    return window.xmoj.mail.readMention(mentionId);
+}
+export function markBbsMentionRead(mentionId: number): Promise<unknown> {
+    return window.xmoj.bbs.readMention(mentionId);
+}

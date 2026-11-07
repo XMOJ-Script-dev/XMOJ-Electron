@@ -1,7 +1,7 @@
 <script setup lang="ts">import { ref } from 'vue';
-import { CloudDownload, CloudUpload, Monitor, Moon, RotateCcw, Sun } from '@lucide/vue';
+import { CloudDownload, CloudUpload, Monitor, Moon, RotateCcw, Sun, Trash2 } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
-import { pullCloudSettings, pushCloudSettings } from '@/services/api';
+import { clearPageCache, pullCloudSettings, pushCloudSettings } from '@/services/api';
 import { useToasts } from '@/stores/toasts';
 import { applySyncedSettings, collectSyncedSettings, usePreferences, type Preferences, type ThemePreference, } from '@/stores/preferences';
 const { preferences, resolvedTheme, reset } = usePreferences();
@@ -43,6 +43,23 @@ async function pushCloud(): Promise<void> {
     }
     finally {
         cloudBusy.value = false;
+    }
+}
+const cacheBusy = ref(false);
+async function clearCache(): Promise<void> {
+    cacheBusy.value = true;
+    try {
+        const cleared = await clearPageCache();
+        if (cleared > 0)
+            toasts.success(`已清除 ${cleared} 条页面缓存`);
+        else
+            toasts.info('没有需要清除的缓存');
+    }
+    catch (caught) {
+        toasts.error(caught instanceof Error ? caught.message : String(caught));
+    }
+    finally {
+        cacheBusy.value = false;
     }
 }
 const THEMES: {
@@ -172,6 +189,17 @@ const toggles: {
           上传到账号
         </Button>
       </div>
+    </section>
+
+    <section class="space-y-3 rounded-xl border p-4">
+      <h2 class="text-sm font-medium">本地缓存</h2>
+      <p class="text-xs text-muted-foreground">
+        清除已缓存的页面数据，下次访问时重新从服务器加载。
+      </p>
+      <Button variant="outline" size="sm" :disabled="cacheBusy" @click="clearCache">
+        <Trash2 />
+        清除缓存
+      </Button>
     </section>
   </div>
 </template>

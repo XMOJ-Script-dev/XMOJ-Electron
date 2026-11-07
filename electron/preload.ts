@@ -156,12 +156,14 @@ const api = {
             content: string;
             captchaSecretKey?: string;
         }) => invoke(IPC.bbsNewReply, payload),
+        readMention: (mentionId: number) => invoke(IPC.bbsReadMention, { mentionId }),
         std: (problemId: number) => invoke(IPC.bbsStd, { problemId }),
     },
     mail: {
         list: (cacheOnly = false) => invoke<CachedValue<unknown>>(IPC.mailList, { cacheOnly }).then((r) => r.value),
         get: (otherUser: string, cacheOnly = false) => invoke<CachedValue<unknown>>(IPC.mailGet, { otherUser, cacheOnly }).then((r) => r.value),
         send: (toUser: string, content: string) => invoke(IPC.mailSend, { toUser, content }),
+        readMention: (mentionId: number) => invoke(IPC.mailReadMention, { mentionId }),
     },
     notices: {
         poll: () => invoke<CommunityNotification[]>(IPC.noticesPoll),

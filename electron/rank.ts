@@ -2,6 +2,27 @@ import { parse } from 'node-html-parser';
 import { XMOJ_ORIGIN, type ContestRank, type RankRow } from '../src/shared/types.ts';
 import type { HttpClient } from './http.ts';
 import { normaliseText } from './parsers.ts';
+function isAcceptedRankColor(raw: string): boolean {
+    const value = raw.trim().toLowerCase();
+    let rgb: [number, number, number] | null = null;
+    const hex = value.match(/^#?([0-9a-f]{6})$/);
+    if (hex) {
+        rgb = [
+            Number.parseInt(hex[1].slice(0, 2), 16),
+            Number.parseInt(hex[1].slice(2, 4), 16),
+            Number.parseInt(hex[1].slice(4, 6), 16),
+        ];
+    }
+    else {
+        const fn = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*[),]/);
+        if (fn)
+            rgb = [Number(fn[1]), Number(fn[2]), Number(fn[3])];
+    }
+    if (!rgb)
+        return false;
+    const [r, g, b] = rgb;
+    return (g === 255 && g > r && g > b) || (r === 170 && g === 170 && b === 255);
+}
 export function parseContestRank(html: string, contestId: number, oi: boolean): ContestRank {
     const root = parse(html);
     const table = root.querySelector('table');
@@ -36,7 +57,8 @@ export function parseContestRank(html: string, contestId: number, oi: boolean): 
             const cell = cells[5 + i];
             const value = normaliseText(cell?.textContent ?? '');
             const style = cell?.getAttribute('style') ?? '';
-            const accepted = /#(00ff00|53ff53)/i.test(style);
+            const color = style.match(/background(?:-color)?\s*:\s*([^;]+)/i)?.[1] ?? style;
+            const accepted = isAcceptedRankColor(color);
             problemCells.push({ text: value, accepted });
         }
         rows.push({
@@ -105,7 +127,7 @@ async function fetchCorrectionRank(http: HttpClient, contestId: number): Promise
                 score: Number(row.total ?? 0),
                 cells: (row.cells ?? []).map((cell) => ({
                     text: String(cell.text ?? ''),
-                    accepted: /^(00ff00|53ff53)$/i.test(String(cell.bgColor ?? '').replace(/^#/, '')),
+                    accepted: isAcceptedRankColor(String(cell.bgColor ?? '')),
                 })),
             };
         });
