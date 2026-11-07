@@ -28,6 +28,7 @@ import { useToasts } from '@/stores/toasts';
 import type { ViewId } from '@/stores/navigation';
 const session = useSession();
 const navigation = useNavigation();
+const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const PROTECTED_VIEWS = new Set<ViewId>([
     'problemset',
     'problem',
@@ -59,6 +60,13 @@ onMounted(() => {
     <AppSidebar />
 
     <SidebarInset>
+      <div
+        v-if="webBuild"
+        class="border-b bg-muted/50 px-4 py-2 text-center text-xs text-muted-foreground"
+        role="status"
+      >
+        网页版开放公开首页、月赛信息和软件下载；账户及其他功能请使用桌面版。
+      </div>
       <div
         v-if="session.state.loading"
         class="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"

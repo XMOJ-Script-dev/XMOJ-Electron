@@ -29,7 +29,7 @@ src/
 
 ## 已实现功能
 
-项目介绍页和面向使用者的完整指南位于 [项目网站](https://elxmoj.xmoj-script.uk/) 与 [使用文档](https://elxmoj.xmoj-script.uk/docs/)。
+项目介绍页和面向使用者的完整指南位于 [项目网站](https://elxmoj.xmoj-script.uk/) 与 [使用文档](https://elxmoj.xmoj-script.uk/docs/)；无需安装的公开浏览版位于 [XMOJ Electron 网页版](https://webxmoj.xmoj-script.uk/)。
 
 - **登录**：应用内表单，支持"记住密码"与启动时静默重新登录
 - **头像**：登录后由邮箱经 Cravatar 取头像（MD5 在主进程计算）
@@ -84,9 +84,9 @@ src/
 
 网站源码和使用文档维护在 `website/`。`.github/workflows/pages.yml` 会在 `master` 分支的 `website/` 内容变更时，将完整静态站点发布到 `github-pages` 分支根目录；合入 `dev` 不会触发发布，需等变更进入 `master`，或在 Actions 页面手动运行工作流并选择包含网站内容的分支。
 
-首次启用时，先在 Actions 页面手动运行一次该工作流以创建 `github-pages` 分支，再到仓库 **Settings → Pages** 将部署来源设为 `github-pages` 分支的根目录。还需在 **Settings → Actions → General → Workflow permissions** 中允许 **Read and write permissions**；否则 `GITHUB_TOKEN` 即使在工作流中申请了 `contents: write`，仍可能因仓库权限设置而无法推送分支。
+首次启用时，先在 Actions 页面手动运行一次该工作流以创建 `github-pages` 分支，再到仓库 **Settings → Pages** 将部署来源设为 `github-pages` 分支的根目录。`website/CNAME` 将自定义域名 `elxmoj.xmoj-script.uk` 一并发布；还需在 GitHub Pages 设置中配置该域名，并在 DNS 提供商中按 GitHub 指引配置记录。还需在 **Settings → Actions → General → Workflow permissions** 中允许 **Read and write permissions**；否则 `GITHUB_TOKEN` 即使在工作流中申请了 `contents: write`，仍可能因仓库权限设置而无法推送分支。
 
-公开域名 `elxmoj.xmoj-script.uk` 由 **Cloudflare Pages** 的 Git 集成部署。请在 Cloudflare Pages 项目的 **Settings → Builds & deployments** 中将生产分支设为 `dev`，Build command 留空，并将 Build output directory 设为 `website`（相对仓库根目录；Root directory 留空）。这样 Pages 只会发布 `website/` 中的项目介绍页和文档，不会把仓库根目录的 Electron 应用入口 `index.html` 当作网站首页。上述是 Cloudflare 项目设置，需在 Cloudflare 控制台应用；GitHub Actions 的 `github-pages` 分支发布是独立路径，不负责该自定义域名。
+公开浏览版由 Cloudflare Pages 项目从本仓库的 `dev` 分支构建。请在 Cloudflare Pages 项目 **Settings → Builds & deployments** 中将生产分支设为 `dev`、Root directory 留空、Build command 设为 `npm ci && npm run build:web`、Build output directory 设为 `web-dist`，并将 `webxmoj.xmoj-script.uk` 绑定为自定义域名。网页构建使用独立的 `web/index.html`，不使用仓库根目录供 Electron 打包的 `index.html`。该公开预览版只开放匿名首页、月赛信息和软件下载；登录、题目及评测、提交、讨论和私信等需要账户/桌面能力的功能尚未开放。部署或 DNS 项目设置需在 Cloudflare 控制台应用；GitHub Pages 的 `github-pages` 分支只用于介绍页及文档。
 
 ## 开发
 
@@ -120,7 +120,7 @@ GitHub，CI 里不需要这两个变量。
 
 ### 测试
 
-`tests/` 下是 14 套 Node 侧校验 + 1 套 Electron 端到端：
+`tests/` 下是 15 套 Node 侧校验 + 1 套 Electron 端到端：
 
 ```bash
 npm test              # 解析器校验：对真实页面快照 + 构造的 HUSTOJ 标记
@@ -128,6 +128,7 @@ npm run test:poller   # 轮询器行为（启动/自停/不重叠/异常不中�
 npm run test:diff     # 逐行 diff（插入/删除/行号单调/空侧/大输入）
 npm run test:cache    # 页面缓存（命中标记、maxAge 失效、按键清除、版本失效）
 npm run test:async-resource # 缓存读取/后台刷新期间的加载状态与请求竞争
+npm run test:web-functions # 网页版公开 API 代理：固定上游、错误及方法限制
 npm run test:native-views # 题面卡片/样例包装清理/`/upload` 绝对化、排名表格、
                           # 个人主页 `p(id,count)` 解析（离线，合成 fixture）
 npm run test:cloud-settings # 云同步的**线格式**：`Settings` 必须是 JSON 字符串，

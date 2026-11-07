@@ -21,11 +21,16 @@ const mainItems = [
     { id: 'monthly' as ViewId, title: '月赛', icon: CalendarDays },
     { id: 'discussion' as ViewId, title: '讨论', icon: MessagesSquare },
 ];
+const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
+const visibleMainItems = computed(() => webBuild
+    ? mainItems.filter(item => ['home', 'monthly', 'downloads'].includes(item.id))
+    : mainItems);
 const footerItems = [
     { id: 'mail' as ViewId, title: '短消息', icon: Mail },
     { id: 'export' as ViewId, title: '导出 AC 代码', icon: FolderDown },
     { id: 'settings' as ViewId, title: '偏好设置', icon: Settings },
 ];
+const visibleFooterItems = computed(() => webBuild ? [] : footerItems);
 const currentView = computed(() => navigation.currentView.value);
 const isAuthenticated = computed(() => session.state.authenticated);
 const username = computed(() => session.state.user?.username ?? '');
@@ -81,7 +86,7 @@ function handleSignIn(): void {
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
-            <SidebarMenuItem v-for="item in mainItems" :key="item.id">
+            <SidebarMenuItem v-for="item in visibleMainItems" :key="item.id">
               <SidebarMenuButton
                 :is-active="currentView === item.id"
                 :tooltip="item.title"
@@ -111,7 +116,7 @@ function handleSignIn(): void {
                   <UserChip v-if="username" :username="username" :avatar="false" :link="false" />
                   <span v-else class="truncate">未登录</span>
                   <span class="truncate text-xs text-muted-foreground">
-                    {{ isAuthenticated ? (isAdmin ? '管理员' : '已登录') : '请登录' }}
+                    {{ isAuthenticated ? (isAdmin ? '管理员' : '已登录') : webBuild ? '公开浏览' : '请登录' }}
                   </span>
                 </div>
                 <ChevronsUpDown class="ml-auto group-data-[collapsible=icon]:hidden" />
@@ -125,7 +130,7 @@ function handleSignIn(): void {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                v-for="item in footerItems"
+                v-for="item in visibleFooterItems"
                 :key="item.id"
                 @select="navigation.navigate(item.id)"
               >
@@ -139,7 +144,7 @@ function handleSignIn(): void {
                 <Info />
                 关于
               </DropdownMenuItem>
-              <DropdownMenuItem :disabled="checkingUpdate" @select="checkForUpdates">
+              <DropdownMenuItem v-if="!webBuild" :disabled="checkingUpdate" @select="checkForUpdates">
                 <Loader2 v-if="checkingUpdate" class="animate-spin" />
                 <RefreshCw v-else />
                 检查更新
@@ -148,7 +153,7 @@ function handleSignIn(): void {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                v-if="isAuthenticated"
+                v-if="isAuthenticated && !webBuild"
                 @select="panel.openProfile(username)"
               >
                 <User />
@@ -158,7 +163,7 @@ function handleSignIn(): void {
                 <LogOut />
                 注销
               </DropdownMenuItem>
-              <DropdownMenuItem v-else @select="handleSignIn">
+              <DropdownMenuItem v-else-if="!webBuild" @select="handleSignIn">
                 <LogIn />
                 登录
               </DropdownMenuItem>
