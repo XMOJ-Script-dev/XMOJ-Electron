@@ -29,7 +29,7 @@ src/
 
 ## 已实现功能
 
-项目介绍页和面向使用者的完整指南位于 [项目网站](website/index.html) 与 [使用文档](website/docs/index.html)。
+项目介绍页和面向使用者的完整指南位于 [项目网站](https://xmoj-script-dev.github.io/XMOJ-Electron/) 与 [使用文档](https://xmoj-script-dev.github.io/XMOJ-Electron/docs/)。
 
 - **登录**：应用内表单，支持"记住密码"与启动时静默重新登录
 - **头像**：登录后由邮箱经 Cravatar 取头像（MD5 在主进程计算）
@@ -42,7 +42,7 @@ src/
 - **题目**：题面按 `.cnt-row` 逐块渲染成**卡片**（信息头 + 每块一张卡片）、
   样例输入输出独立卡片、每个复制按钮按下后变「已复制」并在 2 秒后复原、
   可读取标程，实体（`&lt;` 等）会解码回原字符。从**题库列表点一行**即可进入题面
-- **状态**：评测记录（12 种评测结果按类型着色：AC 绿、WA 红、RE 紫、CE 黄、
+- **状态**：评测记录（按评测结论类型着色：AC 绿、WA 红、RE 紫、CE 黄、
   TLE/MLE 黑、未知灰）、多条件筛选、游标翻页；搜索框右侧可进入**代码对比**。
   只有真正的「等待/评测中」才轮询，**「未知」不轮询**
 - **提交**：Monaco 编辑器、语言选择、O2 开关、提交前检查、按题保存草稿。
@@ -82,7 +82,9 @@ src/
 
 ## 项目网站与文档发布
 
-网站源码和使用文档维护在 `website/`。将 `website/` 内容推送到 `master` 后，`.github/workflows/pages.yml` 会将完整静态站点发布到 `github-pages` 分支根目录；也可以在 Actions 页面手动运行该工作流。首次启用时，请在仓库 **Settings → Pages** 将部署来源设为 `github-pages` 分支的根目录。
+网站源码和使用文档维护在 `website/`。`.github/workflows/pages.yml` 会在 `master` 分支的 `website/` 内容变更时，将完整静态站点发布到 `github-pages` 分支根目录；合入 `dev` 不会触发发布，需等变更进入 `master`，或在 Actions 页面手动运行工作流并选择包含网站内容的分支。
+
+首次启用时，先在 Actions 页面手动运行一次该工作流以创建 `github-pages` 分支，再到仓库 **Settings → Pages** 将部署来源设为 `github-pages` 分支的根目录。还需在 **Settings → Actions → General → Workflow permissions** 中允许 **Read and write permissions**；否则 `GITHUB_TOKEN` 即使在工作流中申请了 `contents: write`，仍可能因仓库权限设置而无法推送分支。
 
 ## 开发
 
