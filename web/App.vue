@@ -48,7 +48,7 @@ onMounted(() => {
         class="border-b bg-muted/50 px-4 py-2 text-center text-xs text-muted-foreground"
         role="status"
       >
-        网页版开放公开浏览和登录后的代码提交；其他授权功能仍在接入中。
+        网页版提供公开浏览；登录后可提交代码、使用讨论区、私信、通知与云同步。
       </div>
       <div
         v-if="session.state.loading"

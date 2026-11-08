@@ -228,6 +228,7 @@ export function installWebApi(): void {
                 const payload = await requestSession('GET') as { user?: { email?: string | null } };
                 return payload.user?.email ?? null;
             },
+            avatar: async () => null,
         },
         home: {
             snapshot: async () => parseHome(await getHtml('home')),
