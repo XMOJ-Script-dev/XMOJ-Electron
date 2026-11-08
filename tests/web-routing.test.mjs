@@ -22,6 +22,19 @@ test('problem and submission routes retain their problem IDs', () => {
     assert.equal(parseWebRoute(pageUrl('/problem?id=42')).problemId, 42);
 });
 
+test('contest and contest-problem routes retain both IDs', () => {
+    const contest = parseWebRoute(pageUrl('/contests/52'));
+    assert.equal(contest.view, 'contests');
+    assert.equal(contest.contestId, 52);
+    assert.equal(pathForWebRoute(contest), '/contests/52');
+
+    const problem = parseWebRoute(pageUrl('/contests/52/problems/901'));
+    assert.equal(problem.view, 'problem');
+    assert.equal(problem.contestId, 52);
+    assert.equal(problem.problemId, 901);
+    assert.equal(pathForWebRoute(problem), '/contests/52/problems/901');
+});
+
 test('discussion thread routes retain the post and page', () => {
     const route = parseWebRoute(pageUrl('/discussion/88?page=3'));
     assert.deepEqual(route.thread, { postId: 88, page: 3 });

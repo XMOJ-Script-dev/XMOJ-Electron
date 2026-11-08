@@ -88,6 +88,8 @@ src/
 
 公开浏览版由 Cloudflare Pages 项目从本仓库的 `dev` 分支构建。仓库根目录的 `wrangler.toml` 将 Pages 项目名设为 `webxmoj`、产物目录设为 `web-dist`，并固定 Workers compatibility date。首次创建 Cloudflare Pages 项目时，项目名须为 `webxmoj`；在项目 **Settings → Builds & deployments** 中将生产分支设为 `dev`、Root directory 留空、Build command 设为 `npm ci && npm run build:web`。再将 `webxmoj.xmoj-script.uk` 绑定为 Pages 自定义域名，并按 Cloudflare 指引完成 DNS。以上生产分支、构建命令和自定义域名仍由 Cloudflare 控制台管理，仓库配置文件不能修改账户中的现有项目或 DNS 记录。部署前需在 Pages 项目的 **Settings → Variables and Secrets** 添加加密密钥 `XMOJ_SESSION_KEY`；可本地生成 `openssl rand -base64 32`，并用 `npx wrangler pages secret put XMOJ_SESSION_KEY --project-name=webxmoj` 上传，勿将密钥写入仓库。网页登录凭证只发给同源 Pages Function；函数将 XMOJ 的 `PHPSESSID` 封装在 `Secure; HttpOnly; SameSite=Lax` 加密 Cookie 中，前端不接触或持久化它。社区 API Token 只在服务端单次请求期间使用，不写入浏览器存储。网页构建使用独立的 `web/index.html`，不使用仓库根目录供 Electron 打包的 `index.html`。网页版支持匿名浏览首页、月赛、软件下载和公开用户主页；题库、题面、状态、竞赛列表/详情/排名等需先登录，Pages Function 会验证加密会话并仅在服务端转发 XMOJ 会话。登录后还可提交代码、查看源码与测试点、对比代码、使用讨论区（含 Turnstile 验证）、私信、通知和云同步设置。浏览器偏好保存在本机；本机文件导出、竞赛视频回放、应用更新检查和原生退出确认仍仅由桌面版提供。部署时还需确认 Turnstile 站点密钥允许 `webxmoj.xmoj-script.uk`，并在 Cloudflare 配置 `/api/session` 与 `/api/community` 的速率限制；Pages 项目和 DNS 仍需账户所有者在控制台配置。GitHub Pages 的 `github-pages` 分支只用于介绍页及文档。
 
+网页版支持可分享的直接访问路径：帖子为 `/discussion/{帖子编号}`（分页可追加 `?page={页码}`），独立题目为 `/problem/{题目编号}`，竞赛为 `/contests/{竞赛编号}`，竞赛内题目为 `/contests/{竞赛编号}/problems/{题目编号}`。其他已支持的视图也有稳定路径（如 `/problemset`、`/status`、`/monthly`、`/settings`）；浏览器刷新、前进和后退会恢复对应视图及已支持的实体编号。
+
 ### Cloudflare Pages API 速率限制
 
 在 `webxmoj` 区域的 **Security → WAF → Rate limiting rules** 中创建以下规则，Characteristic 选 **IP**，Action 选 **Block**。表达式均只匹配 `/api/` 动态接口，不会限制静态页面、脚本或图片；规则顺序建议先具体接口、后兜底。Cloudflare 各计划可用的窗口、规则数量及自定义响应能力可能不同，若控制台不提供相应选项，应优先保留登录和提交规则并按计划能力调整。

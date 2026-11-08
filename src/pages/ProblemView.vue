@@ -1,5 +1,5 @@
 <script setup lang="ts">import { computed, onMounted, ref, watch } from 'vue';
-import { Check, Copy, Loader2, RefreshCw, Send } from '@lucide/vue';
+import { Check, ChevronLeft, Copy, Loader2, RefreshCw, Send } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,7 @@ import { htmlToMarkdown } from '@/lib/markdown-copy';
 const navigation = useNavigation();
 const { copy, isCopied } = useCopy(2000);
 const problemId = ref(navigation.activeProblemId.value || 0);
+const contestId = computed(() => navigation.activeContestId.value);
 const problem = ref<ProblemDetail | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -47,7 +48,8 @@ async function load(): Promise<void> {
             return;
         }
         problem.value = fresh.value;
-        navigation.activeProblemId.value = id;
+        if (contestId.value > 0) navigation.viewContestProblem(contestId.value, id);
+        else navigation.viewProblem(id);
     }
     catch (caught) {
         if (current !== request) return;
@@ -99,6 +101,15 @@ onMounted(() => {
         </Button>
       </form>
     </div>
+    <Button
+      v-if="contestId > 0"
+      variant="outline"
+      size="sm"
+      @click="navigation.viewContest(contestId)"
+    >
+      <ChevronLeft />
+      返回竞赛
+    </Button>
 
     <div v-if="loading && !problem" class="space-y-2">
       <Skeleton class="h-10 w-full rounded-lg" />
