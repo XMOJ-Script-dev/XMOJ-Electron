@@ -46,6 +46,7 @@ onMounted(() => {
     <AppSidebar />
     <SidebarInset>
       <div
+        v-if="currentView === 'home'"
         class="border-b bg-muted/50 px-4 py-2 text-center text-xs text-muted-foreground"
         role="status"
       >
