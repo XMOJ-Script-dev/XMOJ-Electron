@@ -41,7 +41,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <SidebarProvider :default-open="false">
+  <SidebarProvider :default-open="true">
     <AppSidebar />
     <SidebarInset>
       <div
