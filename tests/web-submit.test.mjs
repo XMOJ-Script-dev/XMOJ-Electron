@@ -106,6 +106,68 @@ test('submission verifies the session and forwards only validated form fields', 
   assert.equal(requests.length, 2);
 });
 
+test('submission targets an active contest and falls back to the problem after it ends', async () => {
+  const sealed = await createSessionCookie();
+  for (const [endTime, expectedForm] of [
+    [new Date(Date.now() + 60_000).toISOString(), {
+      language: '7',
+      source: 'print(1)',
+      cid: '52',
+      pid: '1',
+    }],
+    [new Date(Date.now() - 60_000).toISOString(), {
+      language: '7',
+      source: 'print(1)',
+      id: '1000',
+    }],
+  ]) {
+    const requests = [];
+    globalThis.fetch = async (url, init) => {
+      const target = String(url);
+      requests.push(target);
+      if (target.endsWith('/loginpage.php')) {
+        return new Response('<a href=logout.php>Please logout First!</a>');
+      }
+      if (target.endsWith('/api/contest/52/A')) {
+        assert.equal(new Headers(init.headers).get('Cookie'), 'PHPSESSID=session123');
+        return new Response(JSON.stringify({
+          contest: { endTime },
+          problems: [{ problemId: 900 }, { problemId: 1000 }],
+        }), { headers: { 'Content-Type': 'application/json' } });
+      }
+      if (target.endsWith('/submit.php')) {
+        assert.deepEqual(Object.fromEntries(new URLSearchParams(String(init.body))), expectedForm);
+        return new Response('<a href="status.php?id=431">submission</a>');
+      }
+      throw new Error(`Unexpected URL: ${target}`);
+    };
+
+    const response = await onRequestPost({
+      request: new Request(`${origin}/api/submit`, {
+        method: 'POST',
+        headers: {
+          Origin: origin,
+          Cookie: `__Host-xmoj-session=${sealed}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          problemId: 1000,
+          languageId: 7,
+          source: 'print(1)',
+          contestId: 52,
+        }),
+      }),
+      env,
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(requests, [
+      'https://www.xmoj.tech/loginpage.php',
+      'https://www.xmoj.tech/api/contest/52/A',
+      'https://www.xmoj.tech/submit.php',
+    ]);
+  }
+});
+
 test('submission rejects oversized source and invalid problem IDs', async () => {
   const sealed = await createSessionCookie();
   let contactedUpstream = false;

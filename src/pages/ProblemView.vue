@@ -60,7 +60,7 @@ async function load(): Promise<void> {
     }
 }
 function goSubmit(): void {
-    navigation.submitProblem(problem.value?.id ?? Number(problemId.value));
+    navigation.submitProblem(problem.value?.id ?? Number(problemId.value), contestId.value);
 }
 watch(() => navigation.activeProblemId.value, (id) => {
     if (id > 0 && id !== problemId.value) {

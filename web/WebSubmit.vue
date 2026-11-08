@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { ref, watch } from 'vue';
 import { AlertTriangle, Loader2, Send } from '@lucide/vue';
 import { Button } from '../src/components/ui/button';
 import { Input } from '../src/components/ui/input';
 import { fetchProblemDetail, submitCode } from '../src/services/api';
 import type { ProblemDetail } from '../src/shared/types';
 
-const problemId = ref('');
+const props = defineProps<{
+  problemId: number;
+  contestId: number;
+}>();
+const problemId = ref(props.problemId > 0 ? String(props.problemId) : '');
 const problem = ref<ProblemDetail | null>(null);
 const languageId = ref(1);
 const source = ref('');
@@ -52,6 +56,7 @@ async function submit(): Promise<void> {
       languageId: languageId.value,
       source: source.value,
       enableO2: enableO2.value,
+      ...(props.contestId > 0 ? { contestId: props.contestId } : {}),
     });
     if (!response.ok) throw new Error(response.message || '提交失败');
     result.value = response.solutionId
@@ -65,13 +70,10 @@ async function submit(): Promise<void> {
   }
 }
 
-onMounted(() => {
-  const id = new URLSearchParams(location.search).get('id');
-  if (id && /^\d+$/.test(id)) {
-    problemId.value = id;
-    void loadProblem();
-  }
-});
+watch(() => props.problemId, (id) => {
+  problemId.value = id > 0 ? String(id) : '';
+  if (id > 0) void loadProblem();
+}, { immediate: true });
 </script>
 
 <template>

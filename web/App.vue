@@ -63,7 +63,11 @@ onMounted(() => {
       <Problemset v-else-if="currentView === 'problemset'" />
       <ProblemView v-else-if="currentView === 'problem'" />
       <Status v-else-if="currentView === 'status'" />
-      <Submit v-else-if="currentView === 'submit'" />
+      <Submit
+        v-else-if="currentView === 'submit'"
+        :problem-id="navigation.activeProblemId.value"
+        :contest-id="navigation.activeContestId.value"
+      />
       <Discussion v-else-if="currentView === 'discussion'" />
       <Mail v-else-if="currentView === 'mail'" />
       <Compare v-else-if="currentView === 'compare'" />

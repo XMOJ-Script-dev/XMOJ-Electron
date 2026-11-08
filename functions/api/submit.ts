@@ -21,6 +21,12 @@ function sameOrigin(request: Request): boolean {
   return request.headers.get('Origin') === new URL(request.url).origin;
 }
 
+function contestEndTimestamp(value: unknown): number {
+  if (typeof value !== 'string' || !value.trim()) return Number.NaN;
+  const date = value.trim().replace(' ', 'T');
+  return Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(date) ? date : `${date}+08:00`);
+}
+
 export async function onRequestPost({ request, env }: PagesContext): Promise<Response> {
   if (!sameOrigin(request)) return response({ error: 'Invalid request origin' }, 403);
   const session = await readSession(request, env);
@@ -46,10 +52,13 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
   }
   const problemId = Number(input.problemId);
   const languageId = Number(input.languageId);
+  const hasContest = input.contestId !== undefined && input.contestId !== null;
+  const contestId = Number(input.contestId);
   const source = typeof input.source === 'string' ? input.source : '';
   if (
     !Number.isSafeInteger(problemId) || problemId < 1 || problemId > 1_000_000_000 ||
     !Number.isSafeInteger(languageId) || languageId < 0 || languageId > 1000 ||
+    (hasContest && (!Number.isSafeInteger(contestId) || contestId < 1 || contestId > 1_000_000_000)) ||
     !source.trim() || new TextEncoder().encode(source).byteLength > 512_000
   ) {
     return response({ error: '提交信息无效' }, 400);
@@ -65,8 +74,46 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
       return response({ error: '登录状态已失效，请重新登录' }, 401);
     }
 
+    let activeContestId: number | undefined;
+    let activeContestPid: number | undefined;
+    if (hasContest) {
+      const contestResponse = await fetchUpstream(`${XMOJ_ORIGIN}/api/contest/${contestId}/A`, {
+        headers: { Cookie: cookie, Accept: 'application/json' },
+      }, ['www.xmoj.tech', 'xmoj.tech']);
+      if (!contestResponse.ok || !contestResponse.headers.get('content-type')?.includes('json')) {
+        return response({ error: '无法确认竞赛状态，提交未发送' }, 502);
+      }
+      const contestData: unknown = await contestResponse.json();
+      if (
+        !contestData || typeof contestData !== 'object' ||
+        !('contest' in contestData) || !contestData.contest || typeof contestData.contest !== 'object'
+      ) {
+        return response({ error: '竞赛信息格式无效，提交未发送' }, 502);
+      }
+      const endTime = contestEndTimestamp(contestData.contest.endTime);
+      if (!Number.isFinite(endTime)) {
+        return response({ error: '无法确认竞赛结束时间，提交未发送' }, 502);
+      }
+      if (endTime > Date.now()) {
+        const problems = 'problems' in contestData && Array.isArray(contestData.problems)
+          ? contestData.problems
+          : [];
+        const contestPid = problems.findIndex((problem) => {
+          if (!problem || typeof problem !== 'object' || !('problemId' in problem)) return false;
+          return Number(problem.problemId) === problemId;
+        });
+        if (contestPid < 0) {
+          return response({ error: '题目不属于该竞赛，提交未发送' }, 400);
+        }
+        activeContestId = contestId;
+        activeContestPid = contestPid;
+      }
+    }
+
     const form = buildSubmitForm({
       problemId,
+      contestId: activeContestId,
+      contestPid: activeContestPid,
       languageId,
       source,
       enableO2: input.enableO2 === true,

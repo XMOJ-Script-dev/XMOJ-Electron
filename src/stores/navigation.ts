@@ -68,7 +68,12 @@ export function parseWebRoute(url: URL): NavigationRoute {
     }
     const submit = pathname.match(/^\/submit(?:\/(\d+))?$/);
     if (submit) {
-        return { view: 'submit', problemId: validId(submit[1] ?? url.searchParams.get('id')), contestId: 0, thread: null };
+        return {
+            view: 'submit',
+            problemId: validId(submit[1] ?? url.searchParams.get('id')),
+            contestId: validId(url.searchParams.get('contest')),
+            thread: null,
+        };
     }
     const discussion = pathname.match(/^\/discussion(?:\/(\d+))?$/);
     if (discussion) {
@@ -87,7 +92,10 @@ export function pathForWebRoute(route: NavigationRoute): string {
         return `/contests/${route.contestId}`;
     }
     if (route.view === 'problem' || route.view === 'submit') {
-        return route.problemId > 0 ? `${paths[route.view]}/${route.problemId}` : paths[route.view];
+        const path = route.problemId > 0 ? `${paths[route.view]}/${route.problemId}` : paths[route.view];
+        return route.view === 'submit' && route.contestId > 0
+            ? `${path}?contest=${route.contestId}`
+            : path;
     }
     if (route.view === 'discussion' && route.thread) {
         const suffix = route.thread.page > 1 ? `?page=${route.thread.page}` : '';
@@ -131,10 +139,10 @@ export function useNavigation() {
         if (id !== 'discussion') activeThread.value = null;
         syncBrowserRoute();
     }
-    function submitProblem(problemId: number): void {
+    function submitProblem(problemId: number, contestId = 0): void {
         activeProblemId.value = problemId;
         currentView.value = 'submit';
-        activeContestId.value = 0;
+        activeContestId.value = contestId;
         activeThread.value = null;
         syncBrowserRoute();
     }
