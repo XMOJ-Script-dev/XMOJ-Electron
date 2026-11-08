@@ -269,17 +269,30 @@ export function installWebApi(): void {
         problemset: {
             list: async (query: ProblemsetQuery = {}) => cached(await requestJson<ProblemsetPage>(
                 `/api/problemset${query.search ? `?search=${encodeURIComponent(query.search)}` : ''}`,
+                { credentials: 'include' },
             )),
-            all: async () => requestJson<ProblemsetPage>('/api/problemset'),
+            all: async () => requestJson<ProblemsetPage>('/api/problemset', { credentials: 'include' }),
         },
         problem: {
-            detail: async (problemId: number) => cached(await requestJson<ProblemDetail>(`/api/problem?id=${problemId}`)),
+            detail: async (problemId: number) => cached(await requestJson<ProblemDetail>(
+                `/api/problem?id=${problemId}`,
+                { credentials: 'include' },
+            )),
         },
         contest: {
-            list: async (page = 1) => cached(await requestJson<ContestListPage>(`/api/contest-list?page=${page}`)),
-            detail: async (contestId: number) => cached(await requestJson<ContestDetail>(`/api/contest-detail?id=${contestId}`)),
+            list: async (page = 1) => cached(await requestJson<ContestListPage>(
+                `/api/contest-list?page=${page}`,
+                { credentials: 'include' },
+            )),
+            detail: async (contestId: number) => cached(await requestJson<ContestDetail>(
+                `/api/contest-detail?id=${contestId}`,
+                { credentials: 'include' },
+            )),
             problems: async (contestId: number) => {
-                const detail = await requestJson<ContestDetail>(`/api/contest-detail?id=${contestId}`);
+                const detail = await requestJson<ContestDetail>(
+                    `/api/contest-detail?id=${contestId}`,
+                    { credentials: 'include' },
+                );
                 return detail.problems.map((problem, index): ContestProblem => ({
                     index,
                     label: problem.num,
@@ -292,6 +305,7 @@ export function installWebApi(): void {
             },
             rank: async (contestId: number, oi: boolean) => requestJson<ContestRank>(
                 `/api/contest-rank?id=${contestId}&oi=${oi}`,
+                { credentials: 'include' },
             ),
             replay: unavailable,
         },
@@ -386,7 +400,7 @@ export function installWebApi(): void {
                 for (const [key, value] of Object.entries(query)) {
                     if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
                 }
-                return requestJson<StatusPage>(`/api/status?${params}`);
+                return requestJson<StatusPage>(`/api/status?${params}`, { credentials: 'include' });
             },
         },
         bbs: {

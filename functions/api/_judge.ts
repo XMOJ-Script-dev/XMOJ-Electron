@@ -1,6 +1,6 @@
 import { XMOJ_ORIGIN } from '../../src/shared/types.ts';
 import { isAlreadyLoggedInResponse, isLoginGate } from '../../electron/parsers.ts';
-import { readSession, type PagesEnv } from './session.ts';
+import { readSession, type PagesEnv, type SessionEnvelope } from './session.ts';
 import { parseJudgeDetails } from '../../electron/judge-details.ts';
 import { fetchUpstream } from './_upstream.ts';
 
@@ -14,6 +14,27 @@ export async function verifiedJudgeSession(request: Request, env: PagesEnv) {
   if (!response.ok) return null;
   const html = await response.text();
   return isAlreadyLoggedInResponse(html) && !isLoginGate(html) ? session : null;
+}
+
+export async function authorizeJudgeSession(
+  request: Request,
+  env: PagesEnv,
+): Promise<{ session: SessionEnvelope } | { response: Response }> {
+  const session = await readSession(request, env);
+  if (!session) {
+    return { response: Response.json({ error: '请先登录后再访问此页面' }, { status: 401 }) };
+  }
+  try {
+    const verified = await verifiedJudgeSession(request, env);
+    if (verified) return { session: verified };
+    return { response: Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401 }) };
+  } catch (error) {
+    console.error('[api/judge-session] verification failed', error);
+    return { response: Response.json({ error: '暂时无法验证 XMOJ 登录状态' }, {
+      status: 502,
+      headers: { 'Cache-Control': 'no-store' },
+    }) };
+  }
 }
 
 export async function getSource(request: Request, env: PagesEnv): Promise<Response> {

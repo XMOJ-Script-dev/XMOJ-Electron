@@ -1,10 +1,13 @@
 import { parseStatusPage } from '../../electron/parsers.ts';
 import { fetchUpstream } from './_upstream.ts';
+import { authorizeJudgeSession } from './_judge.ts';
+import type { PagesEnv } from './session.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 
 interface PagesContext {
   request: Request;
+  env: PagesEnv;
 }
 
 function error(message: string, status: number): Response {
@@ -14,7 +17,7 @@ function error(message: string, status: number): Response {
   });
 }
 
-export async function onRequestGet({ request }: PagesContext): Promise<Response> {
+export async function onRequestGet({ request, env }: PagesContext): Promise<Response> {
   const input = new URL(request.url).searchParams;
   const query = new URLSearchParams();
   for (const [source, target] of [
@@ -34,19 +37,21 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
     }
     query.set(target, value);
   }
+  const authorization = await authorizeJudgeSession(request, env);
+  if ('response' in authorization) return authorization.response;
 
   try {
     const upstreamUrl = new URL('/status.php', XMOJ_ORIGIN);
     upstreamUrl.search = query.toString();
     const response = await fetchUpstream(upstreamUrl, {
-      headers: { Accept: 'text/html' },
+      headers: { Accept: 'text/html', Cookie: `PHPSESSID=${authorization.session.sessionId}` },
       signal: request.signal,
     }, ['www.xmoj.tech', 'xmoj.tech']);
     if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
       return error('暂时无法读取评测记录', 502);
     }
     return Response.json(parseStatusPage(await response.text()), {
-      headers: { 'Cache-Control': 'public, max-age=15, s-maxage=30', 'X-Content-Type-Options': 'nosniff' },
+      headers: { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' },
     });
   } catch {
     return error('暂时无法读取评测记录', 502);

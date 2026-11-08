@@ -1,5 +1,7 @@
 import { parseProblemsetPage } from '../../electron/parsers.ts';
 import { fetchUpstream } from './_upstream.ts';
+import { authorizeJudgeSession } from './_judge.ts';
+import type { PagesEnv } from './session.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 const MAX_PAGES = 40;
@@ -7,6 +9,7 @@ const PAGE_DELAY_MS = 100;
 
 interface PagesContext {
   request: Request;
+  env: PagesEnv;
 }
 
 function error(message: string, status: number): Response {
@@ -16,9 +19,11 @@ function error(message: string, status: number): Response {
   });
 }
 
-export async function onRequestGet({ request }: PagesContext): Promise<Response> {
+export async function onRequestGet({ request, env }: PagesContext): Promise<Response> {
   const search = new URL(request.url).searchParams.get('search')?.trim() ?? '';
   if (search.length > 100) return error('搜索内容过长', 400);
+  const authorization = await authorizeJudgeSession(request, env);
+  if ('response' in authorization) return authorization.response;
 
   try {
     const problems = [];
@@ -28,7 +33,7 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
       url.searchParams.set('page', String(page));
       if (search) url.searchParams.set('search', search);
       const response = await fetchUpstream(url, {
-        headers: { Accept: 'text/html' },
+        headers: { Accept: 'text/html', Cookie: `PHPSESSID=${authorization.session.sessionId}` },
         signal: request.signal,
       }, ['www.xmoj.tech', 'xmoj.tech']);
       if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
@@ -46,7 +51,7 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
       page: 1,
       totalPages: Math.max(1, Math.ceil(problems.length / 20)),
     }, {
-      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300', 'X-Content-Type-Options': 'nosniff' },
+      headers: { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' },
     });
   } catch {
     return error('暂时无法读取题库', 502);

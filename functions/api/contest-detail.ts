@@ -1,9 +1,12 @@
 import { fetchUpstream } from './_upstream.ts';
+import { authorizeJudgeSession } from './_judge.ts';
+import type { PagesEnv } from './session.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 
 interface PagesContext {
   request: Request;
+  env: PagesEnv;
 }
 
 interface RawProblem {
@@ -19,14 +22,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export async function onRequestGet({ request }: PagesContext): Promise<Response> {
+export async function onRequestGet({ request, env }: PagesContext): Promise<Response> {
   const rawId = new URL(request.url).searchParams.get('id') ?? '';
   if (!/^\d{1,10}$/.test(rawId) || Number(rawId) < 1) {
     return Response.json({ error: '无效的比赛编号' }, { status: 400 });
   }
+  const authorization = await authorizeJudgeSession(request, env);
+  if ('response' in authorization) return authorization.response;
   try {
     const response = await fetchUpstream(`${XMOJ_ORIGIN}/api/contest/${rawId}/A`, {
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', Cookie: `PHPSESSID=${authorization.session.sessionId}` },
       signal: request.signal,
     }, ['www.xmoj.tech', 'xmoj.tech']);
     if (!response.ok || !response.headers.get('content-type')?.includes('json')) {
@@ -57,7 +62,7 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
       canExport: Boolean(raw.canExport),
       submitUrl: typeof raw.submitUrl === 'string' ? raw.submitUrl : null,
     }, {
-      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
+      headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch {
     return Response.json({ error: '暂时无法读取比赛信息' }, {

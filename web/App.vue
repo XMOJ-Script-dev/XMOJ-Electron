@@ -30,6 +30,7 @@ const WebPanelHost = defineAsyncComponent(() => import('./WebPanelHost.vue'));
 const Submit = defineAsyncComponent(() => import('./WebSubmit.vue'));
 const currentView = computed(() => navigation.currentView.value);
 const protectedViews = new Set<ViewId>([
+  'problemset', 'problem', 'status', 'contests',
   'submit', 'discussion', 'mail', 'compare',
 ]);
 const showLogin = computed(() => protectedViews.has(currentView.value) && !session.state.authenticated);
