@@ -88,6 +88,20 @@ src/
 
 公开浏览版由 Cloudflare Pages 项目从本仓库的 `dev` 分支构建。仓库根目录的 `wrangler.toml` 将 Pages 项目名设为 `webxmoj`、产物目录设为 `web-dist`，并固定 Workers compatibility date。首次创建 Cloudflare Pages 项目时，项目名须为 `webxmoj`；在项目 **Settings → Builds & deployments** 中将生产分支设为 `dev`、Root directory 留空、Build command 设为 `npm ci && npm run build:web`。再将 `webxmoj.xmoj-script.uk` 绑定为 Pages 自定义域名，并按 Cloudflare 指引完成 DNS。以上生产分支、构建命令和自定义域名仍由 Cloudflare 控制台管理，仓库配置文件不能修改账户中的现有项目或 DNS 记录。部署前需在 Pages 项目的 **Settings → Variables and Secrets** 添加加密密钥 `XMOJ_SESSION_KEY`；可本地生成 `openssl rand -base64 32`，并用 `npx wrangler pages secret put XMOJ_SESSION_KEY --project-name=webxmoj` 上传，勿将密钥写入仓库。网页登录凭证只发给同源 Pages Function；函数将 XMOJ 的 `PHPSESSID` 封装在 `Secure; HttpOnly; SameSite=Lax` 加密 Cookie 中，前端不接触或持久化它。社区 API Token 只在服务端单次请求期间使用，不写入浏览器存储。网页构建使用独立的 `web/index.html`，不使用仓库根目录供 Electron 打包的 `index.html`。网页版支持匿名浏览首页、月赛、软件下载和公开用户主页；题库、题面、状态、竞赛列表/详情/排名等需先登录，Pages Function 会验证加密会话并仅在服务端转发 XMOJ 会话。登录后还可提交代码、查看源码与测试点、对比代码、使用讨论区（含 Turnstile 验证）、私信、通知和云同步设置。浏览器偏好保存在本机；本机文件导出、竞赛视频回放、应用更新检查和原生退出确认仍仅由桌面版提供。部署时还需确认 Turnstile 站点密钥允许 `webxmoj.xmoj-script.uk`，并在 Cloudflare 配置 `/api/session` 与 `/api/community` 的速率限制；Pages 项目和 DNS 仍需账户所有者在控制台配置。GitHub Pages 的 `github-pages` 分支只用于介绍页及文档。
 
+### Cloudflare Pages API 速率限制
+
+在 `webxmoj` 区域的 **Security → WAF → Rate limiting rules** 中创建以下规则，Characteristic 选 **IP**，Action 选 **Block**。表达式均只匹配 `/api/` 动态接口，不会限制静态页面、脚本或图片；规则顺序建议先具体接口、后兜底。Cloudflare 各计划可用的窗口、规则数量及自定义响应能力可能不同，若控制台不提供相应选项，应优先保留登录和提交规则并按计划能力调整。
+
+| 匹配表达式 | 次数 / 周期 | Block 持续时间 |
+| --- | ---: | ---: |
+| `http.request.uri.path eq "/api/session" and http.request.method eq "POST"` | 10 / 600 秒 | 600 秒 |
+| `http.request.uri.path eq "/api/submit" and http.request.method eq "POST"` | 10 / 60 秒 | 60 秒 |
+| `http.request.uri.path eq "/api/community" and http.request.method eq "POST"` | 60 / 60 秒 | 60 秒 |
+| `http.request.uri.path starts_with "/api/" and http.request.method eq "GET"` | 60 / 60 秒 | 60 秒 |
+| `http.request.uri.path starts_with "/api/"` | 120 / 60 秒 | 60 秒 |
+
+规则以 Cloudflare 识别的来源 IP 计数；不要把 Cookie、会话 ID、密码或请求正文配置为计数特征。`/api/community` 目前将读写操作统一 POST 到同一路径，按路径无法为发帖、回复、私信分别限额。Cloudflare 区域规则之外的 Pages 项目若不由该区域代理，需在实际承载该域名的区域配置这些规则。初期应监控误拦截、请求量和上游负载，再依据真实流量调整；共享校园/NAT 出口会让多位用户共用 IP 额度。Cloudflare Block 响应是否包含 `Retry-After` 取决于可用的响应配置；网页版会在响应提供该头时显示等待时长，并在当前页面会话中暂缓对同一路径的后续请求，但不会自动重试登录、提交或社区写操作。[Cloudflare Rate limiting rules 文档](https://developers.cloudflare.com/waf/rate-limiting-rules/)。
+
 ## 开发
 
 ```bash

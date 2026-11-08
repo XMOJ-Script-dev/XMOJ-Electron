@@ -2,6 +2,7 @@ import type { XmojApi } from '../../electron/preload';
 import { SOFTWARE } from '@/shared/software';
 import { XMOJ_ORIGIN, type CommunityNotification, type ContestDetail, type ContestListPage, type ContestProblem, type ContestRank, type DiffLine, type HomeSnapshot, type LoginRequest, type MonthlyBoard, type ProblemsetPage, type ProblemDetail, type ProblemsetQuery, type StatusPage, type StatusQuery, type UserInfo, type UserProfile } from '@/shared/types';
 import { diffLines } from '@/lib/diff';
+import { createRateLimitedFetch, rateLimitMessage, retryAfterDeadline } from '@/lib/rate-limit';
 
 const EMPTY_SESSION = {
     authenticated: false,
@@ -15,6 +16,29 @@ const EMPTY_SESSION = {
 interface HtmlResponse {
     html: string;
     serverTime: number;
+}
+
+const fetchApi = createRateLimitedFetch((input, init) => fetch(input, init));
+
+async function readJsonResponse<T>(response: Response, fallback: string): Promise<T> {
+    let payload: unknown;
+    try {
+        payload = await response.json();
+    } catch {
+        payload = null;
+    }
+    if (response.status === 429) {
+        throw new Error(rateLimitMessage(retryAfterDeadline(response.headers.get('Retry-After'))));
+    }
+    if (!response.ok) {
+        const message = payload && typeof payload === 'object' && 'error' in payload &&
+            typeof payload.error === 'string' && payload.error
+            ? payload.error
+            : fallback;
+        throw new Error(message);
+    }
+    if (!payload || typeof payload !== 'object') throw new Error(fallback);
+    return payload as T;
 }
 
 function communityCall<T>(action: string, data: Record<string, unknown> = {}): Promise<T> {
@@ -155,35 +179,30 @@ function parseMonthly({ html, serverTime }: HtmlResponse): MonthlyBoard {
 }
 
 async function getHtml(path: 'home' | 'monthly'): Promise<HtmlResponse> {
-    const response = await fetch(`/api/${path}`, { credentials: 'omit' });
-    const payload = await response.json() as HtmlResponse | { error?: string };
-    if (!response.ok || !('html' in payload) || typeof payload.html !== 'string') {
-        throw new Error('error' in payload && payload.error ? payload.error : '网页数据暂时不可用');
-    }
+    const response = await fetchApi(`/api/${path}`, { credentials: 'omit' });
+    const payload = await readJsonResponse<HtmlResponse | { error?: string }>(response, '网页数据暂时不可用');
+    if (!('html' in payload) || typeof payload.html !== 'string') throw new Error('网页数据暂时不可用');
     return payload;
 }
 
 async function requestSession(method: 'GET' | 'POST' | 'DELETE', body?: unknown) {
-    const response = await fetch('/api/session', {
+    const response = await fetchApi('/api/session', {
         method,
         credentials: 'include',
         headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const payload = await response.json() as { error?: string; ok?: boolean; state?: typeof EMPTY_SESSION };
-    if (!response.ok) throw new Error(payload.error ?? '网页会话暂不可用');
-    return payload;
+    return readJsonResponse<{ error?: string; ok?: boolean; state?: typeof EMPTY_SESSION }>(
+        response,
+        '网页会话暂不可用',
+    );
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(path, { credentials: 'omit', ...init });
-    const payload = await response.json() as T | { error?: string };
-    if (!response.ok || (payload && typeof payload === 'object' && 'error' in payload)) {
-        throw new Error(
-            payload && typeof payload === 'object' && 'error' in payload && payload.error
-                ? payload.error
-                : '网页数据暂时不可用',
-        );
+    const response = await fetchApi(path, { credentials: 'omit', ...init });
+    const payload = await readJsonResponse<T | { error?: string }>(response, '网页数据暂时不可用');
+    if (payload && typeof payload === 'object' && 'error' in payload) {
+        throw new Error(typeof payload.error === 'string' && payload.error ? payload.error : '网页数据暂时不可用');
     }
     return payload as T;
 }
