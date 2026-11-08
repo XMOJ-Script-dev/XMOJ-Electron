@@ -61,7 +61,7 @@ async function handleLogout(): Promise<void> {
     navigation.navigate('home');
 }
 function handleSignIn(): void {
-    navigation.navigate('problemset');
+    navigation.navigate(webBuild ? 'discussion' : 'problemset');
 }
 </script>
 
