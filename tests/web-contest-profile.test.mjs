@@ -69,6 +69,20 @@ test('contest detail validates the ID and maps public problem data', async () =>
   });
 });
 
+test('contest detail identifies an expired upstream session', async () => {
+  const cookie = await createWebSessionCookie();
+  globalThis.fetch = async url => String(url).endsWith('/loginpage.php')
+    ? new Response('请登录后继续操作')
+    : new Response('请登录后继续操作', { headers: { 'Content-Type': 'text/html' } });
+  const response = await contestDetail({
+    request: new Request(`${origin}/api/contest-detail?id=12`, {
+      headers: { Cookie: `__Host-xmoj-session=${cookie}` },
+    }),
+    env: webSessionEnv,
+  });
+  assert.equal(response.status, 401);
+});
+
 test('contest rank uses the fixed rank path and parses rows', async () => {
   const cookie = await createWebSessionCookie();
   let fetchedUrl;

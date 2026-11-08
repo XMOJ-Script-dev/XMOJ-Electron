@@ -26,20 +26,21 @@ async function load(): Promise<void> {
   details.value = null;
   error.value = '';
   detailsError.value = '';
-  const [code, judge] = await Promise.allSettled([
-    fetchSource(id),
-    window.xmoj.source.details(id),
+  await Promise.all([
+    fetchSource(id).then((value) => {
+      if (request !== requestId) return;
+      source.value = value;
+      if (source.value === null) error.value = '无法读取该提交的代码（可能已被隐藏）';
+    }).catch((reason: unknown) => {
+      if (request === requestId) error.value = reason instanceof Error ? reason.message : String(reason);
+    }),
+    window.xmoj.source.details(id).then((value) => {
+      if (request === requestId) details.value = value;
+    }).catch(() => {
+      if (request === requestId) detailsError.value = '测试点详情加载失败';
+    }),
   ]);
-  if (request !== requestId) return;
-  if (code.status === 'fulfilled') {
-    source.value = code.value;
-    if (source.value === null) error.value = '无法读取该提交的代码（可能已被隐藏）';
-  } else {
-    error.value = code.reason instanceof Error ? code.reason.message : String(code.reason);
-  }
-  if (judge.status === 'fulfilled') details.value = judge.value;
-  else detailsError.value = '测试点详情加载失败';
-  loading.value = false;
+  if (request === requestId) loading.value = false;
 }
 
 onMounted(() => void load());

@@ -36,16 +36,17 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-test('source and judge-detail routes require a live session and use fixed upstream paths', async () => {
+test('source and judge-detail routes verify sessions in parallel with fixed upstream requests', async () => {
   const sealed = await createSessionCookie();
   const requests = [];
   globalThis.fetch = async (url, init) => {
     const target = String(url);
     requests.push(target);
     if (target.endsWith('/loginpage.php')) {
-      assert.equal(init.headers.Cookie, 'PHPSESSID=private-session-id');
+      assert.equal(new Headers(init.headers).get('Cookie'), 'PHPSESSID=private-session-id');
       return new Response('<a href=logout.php>Please logout First!</a>');
     }
+    assert.equal(new Headers(init.headers).get('Cookie'), 'PHPSESSID=private-session-id');
     if (target.endsWith('/getsource.php?id=431')) return new Response('print(1)');
     if (target.endsWith('/reinfo.php?sid=431')) {
       return new Response('<script>var json={"st":0,"tasks":[{"i":1,"s":4,"t":15,"m":128}]};</script>');
@@ -71,6 +72,18 @@ test('source and judge-detail routes require a live session and use fixed upstre
     'https://www.xmoj.tech/loginpage.php',
     'https://www.xmoj.tech/reinfo.php?sid=431',
   ]);
+});
+
+test('source routes report an expired upstream session', async () => {
+  const sealed = await createSessionCookie();
+  globalThis.fetch = async () => new Response('请登录后继续操作');
+  const response = await source({
+    request: new Request(`${origin}/api/source?id=431`, {
+      headers: { Cookie: `__Host-xmoj-session=${sealed}` },
+    }),
+    env,
+  });
+  assert.equal(response.status, 401);
 });
 
 test('source routes reject invalid IDs before upstream requests', async () => {

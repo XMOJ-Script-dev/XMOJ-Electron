@@ -7,6 +7,10 @@ import { fetchUpstream } from './_upstream.ts';
 export async function verifiedJudgeSession(request: Request, env: PagesEnv) {
   const session = await readSession(request, env);
   if (!session) return null;
+  return verifyJudgeSession(session);
+}
+
+export async function verifyJudgeSession(session: SessionEnvelope) {
   const response = await fetchUpstream(`${XMOJ_ORIGIN}/loginpage.php`, {
     headers: { Cookie: `PHPSESSID=${session.sessionId}`, Accept: 'text/html' },
     signal: AbortSignal.timeout(20_000),
@@ -46,10 +50,14 @@ export async function getSource(request: Request, env: PagesEnv): Promise<Respon
   const session = await readSession(request, env);
   if (!session) return Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401 });
   try {
-    const upstream = await fetchUpstream(`${XMOJ_ORIGIN}/getsource.php?id=${id}`, {
-      headers: { Cookie: `PHPSESSID=${session.sessionId}`, Accept: 'text/plain, text/html' },
-      signal: AbortSignal.timeout(20_000),
-    }, ['www.xmoj.tech', 'xmoj.tech']);
+    const [verified, upstream] = await Promise.all([
+      verifyJudgeSession(session),
+      fetchUpstream(`${XMOJ_ORIGIN}/getsource.php?id=${id}`, {
+        headers: { Cookie: `PHPSESSID=${session.sessionId}`, Accept: 'text/plain, text/html' },
+        signal: AbortSignal.timeout(20_000),
+      }, ['www.xmoj.tech', 'xmoj.tech']),
+    ]);
+    if (!verified) return Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401 });
     if (!upstream.ok) return Response.json({ source: null }, { headers: { 'Cache-Control': 'no-store' } });
     const raw = await upstream.text();
     if (new TextEncoder().encode(raw).byteLength > 512_000) {
@@ -77,10 +85,14 @@ export async function getSourceDetails(request: Request, env: PagesEnv): Promise
   const session = await readSession(request, env);
   if (!session) return Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401 });
   try {
-    const upstream = await fetchUpstream(`${XMOJ_ORIGIN}/reinfo.php?sid=${id}`, {
-      headers: { Cookie: `PHPSESSID=${session.sessionId}`, Accept: 'text/html' },
-      signal: AbortSignal.timeout(20_000),
-    }, ['www.xmoj.tech', 'xmoj.tech']);
+    const [verified, upstream] = await Promise.all([
+      verifyJudgeSession(session),
+      fetchUpstream(`${XMOJ_ORIGIN}/reinfo.php?sid=${id}`, {
+        headers: { Cookie: `PHPSESSID=${session.sessionId}`, Accept: 'text/html' },
+        signal: AbortSignal.timeout(20_000),
+      }, ['www.xmoj.tech', 'xmoj.tech']),
+    ]);
+    if (!verified) return Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401 });
     if (!upstream.ok) return Response.json({ error: '无法读取测试点详情' }, { status: 502 });
     const html = await upstream.text();
     if (new TextEncoder().encode(html).byteLength > 1_000_000) {

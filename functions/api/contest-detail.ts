@@ -1,5 +1,6 @@
 import { fetchUpstream } from './_upstream.ts';
 import { isLoginGate } from '../../electron/parsers.ts';
+import { verifyJudgeSession } from './_judge.ts';
 import { readSession, type PagesEnv } from './session.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
@@ -32,10 +33,19 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
     return Response.json({ error: '请先登录后再访问此页面' }, { status: 401 });
   }
   try {
-    const response = await fetchUpstream(`${XMOJ_ORIGIN}/api/contest/${rawId}/A`, {
-      headers: { Accept: 'application/json', Cookie: `PHPSESSID=${session.sessionId}` },
-      signal: request.signal,
-    }, ['www.xmoj.tech', 'xmoj.tech']);
+    const [verified, response] = await Promise.all([
+      verifyJudgeSession(session),
+      fetchUpstream(`${XMOJ_ORIGIN}/api/contest/${rawId}/A`, {
+        headers: { Accept: 'application/json', Cookie: `PHPSESSID=${session.sessionId}` },
+        signal: request.signal,
+      }, ['www.xmoj.tech', 'xmoj.tech']),
+    ]);
+    if (!verified) {
+      return Response.json({ error: '登录状态已失效，请重新登录' }, {
+        status: 401,
+        headers: { 'Cache-Control': 'no-store' },
+      });
+    }
     if (!response.ok || !response.headers.get('content-type')?.includes('json')) {
       const body = await response.text();
       if (response.status === 401 || response.status === 403 || isLoginGate(body)) {
