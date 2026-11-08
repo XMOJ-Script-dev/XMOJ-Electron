@@ -3,6 +3,7 @@ import { attachOpeningComment } from '../../src/shared/discussion.ts';
 import type { BbsPostDetail } from '../../src/shared/community.ts';
 import { isAlreadyLoggedInResponse, isLoginGate } from '../../electron/parsers.ts';
 import { readSession, type PagesEnv } from './session.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 const CLIENT_VERSION = '4.0.5';
 const LOGIN_REQUIRED = new Set([
@@ -111,7 +112,7 @@ async function post(
   data: unknown,
   usernameHint = '',
 ): Promise<Response> {
-  return fetch(`${XMOJ_API_ORIGIN}/${action}`, {
+  return fetchUpstream(`${XMOJ_API_ORIGIN}/${action}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -126,9 +127,8 @@ async function post(
       Version: CLIENT_VERSION,
       DebugMode: false,
     }),
-    redirect: 'error',
     signal: AbortSignal.timeout(20_000),
-  });
+  }, ['api.xmoj-script.uk']);
 }
 
 async function callCommunity(
@@ -238,11 +238,10 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
     const session = await readSession(request, env);
     if (!session) return json({ error: '登录状态已失效，请重新登录' }, 401);
     try {
-      const verified = await fetch('https://www.xmoj.tech/loginpage.php', {
+      const verified = await fetchUpstream('https://www.xmoj.tech/loginpage.php', {
         headers: { Cookie: `PHPSESSID=${session.sessionId}`, Accept: 'text/html' },
-        redirect: 'manual',
         signal: AbortSignal.timeout(20_000),
-      });
+      }, ['www.xmoj.tech', 'xmoj.tech']);
       if (!verified.ok) return json({ error: '登录状态已失效，请重新登录' }, 401);
       const html = await verified.text();
       if (!isAlreadyLoggedInResponse(html) || isLoginGate(html)) {
@@ -266,14 +265,26 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
         }
       }
       return json(result);
-    } catch {
-      return json({ error: '社区服务暂时不可用' }, 502);
+    } catch (caught) {
+      console.error('[api/community] upstream request failed', caught);
+      return json({ error: '社区服务暂时不可用', cause: safeFailureCode(caught) }, 502);
     }
   }
 
   try {
     return json(await callCommunity(action, data, { sessionId: '', username: '' }));
-  } catch {
-    return json({ error: '社区服务暂时不可用' }, 502);
+  } catch (caught) {
+    console.error('[api/community] public request failed', caught);
+    return json({ error: '社区服务暂时不可用', cause: safeFailureCode(caught) }, 502);
   }
+}
+
+function safeFailureCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  const status = message.match(/HTTP (\d{3})/);
+  if (status) return `upstream_http_${status[1]}`;
+  if (message.includes('非 JSON')) return 'upstream_invalid_json';
+  if (message.includes('响应过大')) return 'upstream_response_too_large';
+  if (message.includes('重定向')) return 'upstream_redirect_rejected';
+  return 'upstream_unreachable';
 }

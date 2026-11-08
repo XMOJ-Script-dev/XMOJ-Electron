@@ -1,4 +1,7 @@
+import { fetchUpstream } from './_upstream.ts';
+
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
+const XMOJ_HOSTS = ['www.xmoj.tech', 'xmoj.tech'];
 
 export async function getPublicPage(request: Request, path: string, label: string) {
   if (request.method !== 'GET') {
@@ -6,11 +9,10 @@ export async function getPublicPage(request: Request, path: string, label: strin
   }
 
   try {
-    const upstream = await fetch(new URL(path, XMOJ_ORIGIN), {
+    const upstream = await fetchUpstream(new URL(path, XMOJ_ORIGIN), {
       headers: { Accept: 'text/html' },
-      redirect: 'manual',
       signal: request.signal
-    });
+    }, XMOJ_HOSTS);
 
     if (!upstream.ok || !upstream.headers.get('content-type')?.includes('text/html')) {
       return Response.json({ error: label }, {
@@ -25,7 +27,8 @@ export async function getPublicPage(request: Request, path: string, label: strin
         'X-Content-Type-Options': 'nosniff'
       }
     });
-  } catch {
+  } catch (caught) {
+    console.error('[api/public-page] upstream request failed', caught);
     return Response.json({ error: label }, {
       status: 502,
       headers: { 'Cache-Control': 'no-store' }

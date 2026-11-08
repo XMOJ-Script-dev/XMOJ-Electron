@@ -1,4 +1,5 @@
 import { isAlreadyLoggedInResponse, isLoginFailureAlert, isLoginGate, parseLoginAlert, parseProfile } from '../../electron/parsers.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 const COOKIE_NAME = '__Host-xmoj-session';
@@ -132,10 +133,9 @@ async function verifySession(request: Request, env: PagesEnv): Promise<Response>
   const session = await readSession(request, env);
   if (!session) return json(emptySession(), 401, { 'Set-Cookie': clearCookie() });
 
-  const upstream = await fetch(`${XMOJ_ORIGIN}/loginpage.php`, {
+  const upstream = await fetchUpstream(`${XMOJ_ORIGIN}/loginpage.php`, {
     headers: { Cookie: upstreamCookie(session.sessionId), Accept: 'text/html' },
-    redirect: 'manual',
-  }).catch(() => null);
+  }, ['www.xmoj.tech', 'xmoj.tech']).catch(() => null);
   if (!upstream?.ok) return json(emptySession(), 401, { 'Set-Cookie': clearCookie() });
   const html = await upstream.text();
   if (!isAlreadyLoggedInResponse(html) || isLoginGate(html)) {
@@ -191,19 +191,17 @@ async function login(request: Request, env: PagesEnv): Promise<Response> {
     if (isLoginFailureAlert(alert)) return json({ error: alert }, 401);
     if (!sessionId) return json({ error: '登录失败：服务器未下发会话 Cookie' }, 401);
 
-    const verification = await fetch(`${XMOJ_ORIGIN}/loginpage.php`, {
+    const verification = await fetchUpstream(`${XMOJ_ORIGIN}/loginpage.php`, {
       headers: { Cookie: upstreamCookie(sessionId), Accept: 'text/html' },
-      redirect: 'manual',
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     const verificationHtml = await verification.text();
     if (!verification.ok || !isAlreadyLoggedInResponse(verificationHtml) || isLoginGate(verificationHtml)) {
       return json({ error: '登录状态未能确认，请检查用户名与密码' }, 401);
     }
 
-    const profileResponse = await fetch(`${XMOJ_ORIGIN}/index.php`, {
+    const profileResponse = await fetchUpstream(`${XMOJ_ORIGIN}/index.php`, {
       headers: { Cookie: upstreamCookie(sessionId), Accept: 'text/html' },
-      redirect: 'manual',
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     const profile = profileResponse.ok ? parseProfile(await profileResponse.text()) : null;
     const authenticatedUsername = profile?.username || username;
     const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000;
@@ -230,10 +228,9 @@ async function logout(request: Request, env: PagesEnv): Promise<Response> {
   if (sealed) {
     const session = await unseal(env, sealed);
     if (session) {
-      await fetch(`${XMOJ_ORIGIN}/logout.php`, {
+      await fetchUpstream(`${XMOJ_ORIGIN}/logout.php`, {
         headers: { Cookie: upstreamCookie(session.sessionId) },
-        redirect: 'manual',
-      }).catch(() => undefined);
+      }, ['www.xmoj.tech', 'xmoj.tech']).catch(() => undefined);
     }
   }
   return json(emptySession(), 200, { 'Set-Cookie': clearCookie() });

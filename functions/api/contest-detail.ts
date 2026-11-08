@@ -1,3 +1,5 @@
+import { fetchUpstream } from './_upstream.ts';
+
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 
 interface PagesContext {
@@ -23,11 +25,10 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
     return Response.json({ error: '无效的比赛编号' }, { status: 400 });
   }
   try {
-    const response = await fetch(`${XMOJ_ORIGIN}/api/contest/${rawId}/A`, {
+    const response = await fetchUpstream(`${XMOJ_ORIGIN}/api/contest/${rawId}/A`, {
       headers: { Accept: 'application/json' },
-      redirect: 'manual',
       signal: request.signal,
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     if (!response.ok || !response.headers.get('content-type')?.includes('json')) {
       return Response.json({ error: '暂时无法读取比赛信息' }, {
         status: 502,

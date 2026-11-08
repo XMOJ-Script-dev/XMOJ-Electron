@@ -1,6 +1,7 @@
 import { buildSubmitForm, parseSubmitResponse } from '../../electron/problems.ts';
 import { isAlreadyLoggedInResponse, isLoginGate } from '../../electron/parsers.ts';
 import { readSession, type PagesEnv } from './session.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 
@@ -56,10 +57,9 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
 
   try {
     const cookie = `PHPSESSID=${session.sessionId}`;
-    const verify = await fetch(`${XMOJ_ORIGIN}/loginpage.php`, {
+    const verify = await fetchUpstream(`${XMOJ_ORIGIN}/loginpage.php`, {
       headers: { Cookie: cookie, Accept: 'text/html' },
-      redirect: 'manual',
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     const verifyHtml = await verify.text();
     if (!verify.ok || !isAlreadyLoggedInResponse(verifyHtml) || isLoginGate(verifyHtml)) {
       return response({ error: '登录状态已失效，请重新登录' }, 401);

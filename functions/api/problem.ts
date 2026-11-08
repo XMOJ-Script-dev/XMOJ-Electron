@@ -1,4 +1,5 @@
 import { parseLanguages, parseProblemDetail } from '../../electron/problems.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 
@@ -24,11 +25,10 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
   try {
     const problemUrl = new URL('/problem.php', XMOJ_ORIGIN);
     problemUrl.searchParams.set('id', String(problemId));
-    const response = await fetch(problemUrl, {
+    const response = await fetchUpstream(problemUrl, {
       headers: { Accept: 'text/html' },
-      redirect: 'manual',
       signal: request.signal,
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
       return error('暂时无法读取题目', 502);
     }
@@ -37,11 +37,10 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
     try {
       const submitUrl = new URL('/submitpage.php', XMOJ_ORIGIN);
       submitUrl.searchParams.set('id', String(problemId));
-      const submitPage = await fetch(submitUrl, {
+      const submitPage = await fetchUpstream(submitUrl, {
         headers: { Accept: 'text/html' },
-        redirect: 'manual',
         signal: request.signal,
-      });
+      }, ['www.xmoj.tech', 'xmoj.tech']);
       if (submitPage.ok && submitPage.headers.get('content-type')?.includes('text/html')) {
         detail.languages = parseLanguages(await submitPage.text());
       }

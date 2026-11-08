@@ -1,4 +1,5 @@
 import { parseUserProfile } from '../../electron/profile.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 
@@ -14,11 +15,10 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
   const upstreamUrl = new URL('/userinfo.php', XMOJ_ORIGIN);
   upstreamUrl.searchParams.set('user', username);
   try {
-    const response = await fetch(upstreamUrl, {
+    const response = await fetchUpstream(upstreamUrl, {
       headers: { Accept: 'text/html' },
-      redirect: 'manual',
       signal: request.signal,
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
       return Response.json({ error: '暂时无法读取用户主页' }, {
         status: 502,

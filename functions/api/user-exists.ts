@@ -1,4 +1,5 @@
 import { XMOJ_ORIGIN } from '../../src/shared/types.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 interface PagesContext {
   request: Request;
@@ -11,11 +12,10 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
     return Response.json({ error: '用户名无效' }, { status: 400 });
   }
   try {
-    const upstream = await fetch(`${XMOJ_ORIGIN}/userinfo.php?user=${encodeURIComponent(username)}`, {
+    const upstream = await fetchUpstream(`${XMOJ_ORIGIN}/userinfo.php?user=${encodeURIComponent(username)}`, {
       headers: { Accept: 'text/html' },
-      redirect: 'manual',
       signal: AbortSignal.timeout(20_000),
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     if (!upstream.ok || !upstream.headers.get('content-type')?.includes('text/html')) {
       return Response.json({ error: '无法验证用户名' }, { status: 502 });
     }

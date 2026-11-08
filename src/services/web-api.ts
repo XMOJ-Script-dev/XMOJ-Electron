@@ -228,7 +228,16 @@ export function installWebApi(): void {
                 const payload = await requestSession('GET') as { user?: { email?: string | null } };
                 return payload.user?.email ?? null;
             },
-            avatar: async () => null,
+            avatar: async (payload: { username?: string; cacheBust?: boolean } = {}) => {
+                const params = new URLSearchParams();
+                if (payload.username) params.set('username', payload.username);
+                if (payload.cacheBust) params.set('cacheBust', '1');
+                const result = await requestJson<{ avatar: Awaited<ReturnType<XmojApi['session']['avatar']>> }>(
+                    `/api/avatar${params.size ? `?${params}` : ''}`,
+                    { credentials: 'include' },
+                );
+                return result.avatar;
+            },
         },
         home: {
             snapshot: async () => parseHome(await getHtml('home')),

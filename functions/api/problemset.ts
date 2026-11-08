@@ -1,4 +1,5 @@
 import { parseProblemsetPage } from '../../electron/parsers.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 const MAX_PAGES = 40;
@@ -26,11 +27,10 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
       const url = new URL('/problemset.php', XMOJ_ORIGIN);
       url.searchParams.set('page', String(page));
       if (search) url.searchParams.set('search', search);
-      const response = await fetch(url, {
+      const response = await fetchUpstream(url, {
         headers: { Accept: 'text/html' },
-        redirect: 'manual',
         signal: request.signal,
-      });
+      }, ['www.xmoj.tech', 'xmoj.tech']);
       if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
         return error('暂时无法读取题库', 502);
       }

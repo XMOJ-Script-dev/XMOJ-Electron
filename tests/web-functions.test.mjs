@@ -61,6 +61,29 @@ test('upstream failures and redirects are not exposed as successful pages', asyn
   assert.deepEqual(await response.json(), { error: '暂时无法读取小明 OJ 首页' });
 });
 
+test('public page proxy follows HTTPS redirects only between trusted XMOJ hosts', async () => {
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url: String(url), redirect: options.redirect });
+    if (requests.length === 1) {
+      return new Response(null, { status: 301, headers: { Location: 'https://xmoj.tech/' } });
+    }
+    return new Response('<html>canonical</html>', {
+      headers: { 'Content-Type': 'text/html' },
+    });
+  };
+
+  const response = await getHome({
+    request: new Request('https://webxmoj.example/api/home'),
+  });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).html, '<html>canonical</html>');
+  assert.deepEqual(requests, [
+    { url: 'https://www.xmoj.tech/', redirect: 'manual' },
+    { url: 'https://xmoj.tech/', redirect: 'manual' },
+  ]);
+});
+
 test('unsupported methods are rejected without contacting XMOJ', async () => {
   let fetched = false;
   globalThis.fetch = async () => {

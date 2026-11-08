@@ -1,4 +1,5 @@
 import { parseStatusPage } from '../../electron/parsers.ts';
+import { fetchUpstream } from './_upstream.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 
@@ -37,11 +38,10 @@ export async function onRequestGet({ request }: PagesContext): Promise<Response>
   try {
     const upstreamUrl = new URL('/status.php', XMOJ_ORIGIN);
     upstreamUrl.search = query.toString();
-    const response = await fetch(upstreamUrl, {
+    const response = await fetchUpstream(upstreamUrl, {
       headers: { Accept: 'text/html' },
-      redirect: 'manual',
       signal: request.signal,
-    });
+    }, ['www.xmoj.tech', 'xmoj.tech']);
     if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
       return error('暂时无法读取评测记录', 502);
     }
