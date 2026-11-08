@@ -43,7 +43,7 @@ export async function getSource(request: Request, env: PagesEnv): Promise<Respon
   if (!Number.isSafeInteger(id) || id < 1 || id > 1_000_000_000) {
     return Response.json({ error: '评测编号无效' }, { status: 400 });
   }
-  const session = await verifiedJudgeSession(request, env).catch(() => null);
+  const session = await readSession(request, env);
   if (!session) return Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401 });
   try {
     const upstream = await fetchUpstream(`${XMOJ_ORIGIN}/getsource.php?id=${id}`, {
@@ -56,6 +56,9 @@ export async function getSource(request: Request, env: PagesEnv): Promise<Respon
       return Response.json({ error: '源码内容过大' }, { status: 413 });
     }
     const source = raw.replace(/^\s*<!--\s*not[- ]cached\s*-->\s*\r?\n?/i, '').replace(/\r?\n?<!--\s*not[- ]cached\s*-->\s*$/i, '');
+    if (isLoginGate(source)) {
+      return Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+    }
     if (/<html|<body|<!DOCTYPE/i.test(source)) return Response.json({ source: null }, { headers: { 'Cache-Control': 'no-store' } });
     return Response.json({ source }, {
       headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
@@ -71,7 +74,7 @@ export async function getSourceDetails(request: Request, env: PagesEnv): Promise
   if (!Number.isSafeInteger(id) || id < 1 || id > 1_000_000_000) {
     return Response.json({ error: '评测编号无效' }, { status: 400 });
   }
-  const session = await verifiedJudgeSession(request, env).catch(() => null);
+  const session = await readSession(request, env);
   if (!session) return Response.json({ error: '登录状态已失效，请重新登录' }, { status: 401 });
   try {
     const upstream = await fetchUpstream(`${XMOJ_ORIGIN}/reinfo.php?sid=${id}`, {
