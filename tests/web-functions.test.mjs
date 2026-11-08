@@ -14,6 +14,7 @@ test('home endpoint fetches only the fixed public XMOJ URL', async () => {
   globalThis.fetch = async (url, options) => {
     fetchedUrl = String(url);
     assert.equal(options.redirect, 'manual');
+    assert.match(options.headers['User-Agent'], /XMOJ-Electron$/);
     return new Response('<html>home</html>', {
       headers: { 'Content-Type': 'text/html; charset=utf-8' }
     });

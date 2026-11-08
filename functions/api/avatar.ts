@@ -69,8 +69,13 @@ interface PagesContext {
 
 export async function onRequestGet({ request, env }: PagesContext): Promise<Response> {
   const url = new URL(request.url);
-  const requestedUsername = url.searchParams.get('username')?.trim() ?? '';
-  if (requestedUsername.length > 128 || /[\u0000-\u001f\u007f]/.test(requestedUsername)) {
+  const rawUsername = url.searchParams.get('username') ?? '';
+  const requestedUsername = rawUsername.trim();
+  if (
+    requestedUsername.length > 128 ||
+    /[\u0000-\u001f\u007f]/.test(rawUsername) ||
+    (url.searchParams.has('username') && !requestedUsername)
+  ) {
     return Response.json({ error: '用户名无效' }, { status: 400 });
   }
 
