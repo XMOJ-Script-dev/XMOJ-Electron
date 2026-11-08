@@ -3,9 +3,12 @@ import { CloudDownload, CloudUpload, Monitor, Moon, RotateCcw, Sun } from '@luci
 import { Button } from '@/components/ui/button';
 import { pullCloudSettings, pushCloudSettings } from '@/services/api';
 import { useToasts } from '@/stores/toasts';
+import { useSession } from '@/stores/session';
 import { applySyncedSettings, collectSyncedSettings, usePreferences, type Preferences, type ThemePreference, } from '@/stores/preferences';
 const { preferences, resolvedTheme, reset } = usePreferences();
 const toasts = useToasts();
+const session = useSession();
+const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const cloudBusy = ref(false);
 async function pullCloud(): Promise<void> {
     cloudBusy.value = true;
@@ -162,12 +165,15 @@ const toggles: {
       <p class="text-xs text-muted-foreground">
         把本机偏好上传到账号，或从账号下载覆盖本机。不会自动同步。
       </p>
+      <p v-if="webBuild && !session.state.authenticated" class="text-xs text-muted-foreground">
+        登录后可使用云同步；当前浏览器的偏好仍保存在本机。
+      </p>
       <div class="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" :disabled="cloudBusy" @click="pullCloud">
+        <Button variant="outline" size="sm" :disabled="cloudBusy || (webBuild && !session.state.authenticated)" @click="pullCloud">
           <CloudDownload />
           从账号下载
         </Button>
-        <Button variant="outline" size="sm" :disabled="cloudBusy" @click="pushCloud">
+        <Button variant="outline" size="sm" :disabled="cloudBusy || (webBuild && !session.state.authenticated)" @click="pushCloud">
           <CloudUpload />
           上传到账号
         </Button>

@@ -1,5 +1,5 @@
 <script setup lang="ts">import { computed, ref } from 'vue';
-import { BookText, CalendarDays, ChartNoAxesColumn, ChartPie, ChevronsUpDown, Download, FolderDown, House, Info, Loader2, LogIn, LogOut, Mail, MessagesSquare, RefreshCw, Settings, User, } from '@lucide/vue';
+import { ArrowLeftRight, BookText, CalendarDays, ChartNoAxesColumn, ChartPie, ChevronsUpDown, Download, FolderDown, House, Info, Loader2, LogIn, LogOut, Mail, MessagesSquare, RefreshCw, Settings, User, } from '@lucide/vue';
 import UserAvatar from '@/components/UserAvatar.vue';
 import UserChip from '@/components/UserChip.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, } from '@/components/ui/sidebar';
@@ -20,17 +20,20 @@ const mainItems = [
     { id: 'downloads' as ViewId, title: '下载', icon: Download },
     { id: 'monthly' as ViewId, title: '月赛', icon: CalendarDays },
     { id: 'discussion' as ViewId, title: '讨论', icon: MessagesSquare },
+    { id: 'compare' as ViewId, title: '代码对比', icon: ArrowLeftRight },
 ];
 const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const visibleMainItems = computed(() => webBuild
-    ? mainItems.filter(item => ['home', 'problemset', 'status', 'contests', 'monthly', 'downloads'].includes(item.id))
+    ? mainItems.filter(item => ['home', 'problemset', 'status', 'contests', 'monthly', 'downloads', 'discussion', 'compare'].includes(item.id))
     : mainItems);
 const footerItems = [
     { id: 'mail' as ViewId, title: '短消息', icon: Mail },
     { id: 'export' as ViewId, title: '导出 AC 代码', icon: FolderDown },
     { id: 'settings' as ViewId, title: '偏好设置', icon: Settings },
 ];
-const visibleFooterItems = computed(() => webBuild ? [] : footerItems);
+const visibleFooterItems = computed(() => webBuild
+    ? footerItems.filter(item => ['mail', 'settings'].includes(item.id))
+    : footerItems);
 const currentView = computed(() => navigation.currentView.value);
 const isAuthenticated = computed(() => session.state.authenticated);
 const username = computed(() => session.state.user?.username ?? '');
@@ -153,7 +156,7 @@ function handleSignIn(): void {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                v-if="isAuthenticated && !webBuild"
+                v-if="isAuthenticated"
                 @select="panel.openProfile(username)"
               >
                 <User />

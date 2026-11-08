@@ -12,6 +12,11 @@ import Monthly from '../src/pages/Monthly.vue';
 import Problemset from '../src/pages/Problemset.vue';
 import ProblemView from '../src/pages/ProblemView.vue';
 import Status from '../src/pages/Status.vue';
+import Discussion from '../src/pages/Discussion.vue';
+import Mail from '../src/pages/Mail.vue';
+import Compare from '../src/pages/Compare.vue';
+import Settings from '../src/pages/Settings.vue';
+import NotificationToasts from '../src/components/NotificationToasts.vue';
 import type { ViewId } from '../src/stores/navigation';
 import { useNavigation } from '../src/stores/navigation';
 import { usePanel } from '../src/stores/panel';
@@ -25,8 +30,7 @@ const WebPanelHost = defineAsyncComponent(() => import('./WebPanelHost.vue'));
 const Submit = defineAsyncComponent(() => import('./WebSubmit.vue'));
 const currentView = computed(() => navigation.currentView.value);
 const protectedViews = new Set<ViewId>([
-  'submit', 'discussion', 'mail',
-  'compare', 'export',
+  'submit', 'discussion', 'mail', 'compare',
 ]);
 const showLogin = computed(() => protectedViews.has(currentView.value) && !session.state.authenticated);
 
@@ -58,16 +62,21 @@ onMounted(() => {
       <ProblemView v-else-if="currentView === 'problem'" />
       <Status v-else-if="currentView === 'status'" />
       <Submit v-else-if="currentView === 'submit'" />
+      <Discussion v-else-if="currentView === 'discussion'" />
+      <Mail v-else-if="currentView === 'mail'" />
+      <Compare v-else-if="currentView === 'compare'" />
+      <Settings v-else-if="currentView === 'settings'" />
       <Contests v-else-if="currentView === 'contests'" />
       <Monthly v-else-if="currentView === 'monthly'" />
       <Downloads v-else-if="currentView === 'downloads'" />
       <div v-else-if="session.state.authenticated" class="mx-auto max-w-2xl p-8 text-sm text-muted-foreground">
-        该功能的网页版接口仍在接入中，请先使用首页、月赛或下载。
+        该功能暂未提供网页版支持；涉及桌面文件保存、视频回放或原生能力的操作请使用桌面版。
       </div>
       <Home v-else />
     </SidebarInset>
     <ToastStack />
     <MessageBox />
+    <NotificationToasts />
     <WebPanelHost v-if="panel.kind.value" />
   </SidebarProvider>
 </template>

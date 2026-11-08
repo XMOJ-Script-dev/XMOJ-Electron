@@ -1,6 +1,7 @@
 import type { XmojApi } from '../../electron/preload';
 import { SOFTWARE } from '@/shared/software';
-import { XMOJ_ORIGIN, type ContestDetail, type ContestListPage, type ContestProblem, type ContestRank, type HomeSnapshot, type LoginRequest, type MonthlyBoard, type ProblemsetPage, type ProblemDetail, type ProblemsetQuery, type StatusPage, type StatusQuery, type UserProfile } from '@/shared/types';
+import { XMOJ_ORIGIN, type CommunityNotification, type ContestDetail, type ContestListPage, type ContestProblem, type ContestRank, type DiffLine, type HomeSnapshot, type LoginRequest, type MonthlyBoard, type ProblemsetPage, type ProblemDetail, type ProblemsetQuery, type StatusPage, type StatusQuery, type UserInfo, type UserProfile } from '@/shared/types';
+import { diffLines } from '@/lib/diff';
 
 const EMPTY_SESSION = {
     authenticated: false,
@@ -14,6 +15,22 @@ const EMPTY_SESSION = {
 interface HtmlResponse {
     html: string;
     serverTime: number;
+}
+
+function communityCall<T>(action: string, data: Record<string, unknown> = {}): Promise<T> {
+    return requestJson<T>('/api/community', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, data }),
+    });
+}
+
+async function fetchWebSource(solutionId: number): Promise<string | null> {
+    const result = await requestJson<{ source: string | null }>(`/api/source?id=${solutionId}`, {
+        credentials: 'include',
+    });
+    return result.source;
 }
 
 function normaliseText(value: string | null | undefined): string {
@@ -176,12 +193,8 @@ function cached<T>(value: T) {
 }
 
 function unavailable(): Promise<never> {
-    return Promise.reject(new Error('此功能需要账户会话，目前网页版仅开放公开浏览功能。'));
+    return Promise.reject(new Error('此功能暂未在网页版开放。'));
 }
-
-const unavailableSection = new Proxy({}, {
-    get: () => () => unavailable(),
-});
 
 export function installWebApi(): void {
     const noSubscription = () => () => undefined;
@@ -210,6 +223,10 @@ export function installWebApi(): void {
             logout: async () => {
                 const payload = await requestSession('DELETE');
                 return payload as Awaited<ReturnType<XmojApi['session']['logout']>>;
+            },
+            email: async () => {
+                const payload = await requestSession('GET') as { user?: { email?: string | null } };
+                return payload.user?.email ?? null;
             },
         },
         home: {
@@ -268,17 +285,81 @@ export function installWebApi(): void {
             ),
             replay: unavailable,
         },
-        nav: unavailableSection,
+        nav: {
+            info: async () => {
+                const payload = await requestSession('GET') as { authenticated?: boolean; user?: { username?: string; isAdmin?: boolean } };
+                return {
+                    loggedIn: payload.authenticated === true,
+                    serverTime: new Date().toISOString(),
+                    lang: 'zh',
+                    userId: payload.user?.username ?? '',
+                    nick: '',
+                    isAdmin: payload.user?.isAdmin === true,
+                    isTeacher: false,
+                    isContestCreator: false,
+                    isProblemEditor: false,
+                    isContestObserver: false,
+                };
+            },
+        },
         user: {
             profile: async (username: string) => requestJson<UserProfile>(
                 `/api/profile?username=${encodeURIComponent(username)}`,
             ),
-            info: unavailable,
-            exists: unavailable,
+            info: async (username: string) => {
+                const profile = await requestJson<UserProfile>(
+                    `/api/profile?username=${encodeURIComponent(username)}`,
+                );
+                return {
+                    username: profile.username,
+                    nick: profile.nick || null,
+                    isAdmin: false,
+                    badge: null,
+                    rating: profile.rating ?? 0,
+                } satisfies UserInfo;
+            },
+            exists: async (username: string) => requestJson<{ exists: boolean }>(
+                `/api/user-exists?username=${encodeURIComponent(username)}`,
+            ).then(result => result.exists),
         },
-        settings: unavailableSection,
-        cache: unavailableSection,
-        source: unavailableSection,
+        settings: {
+            pull: async () => {
+                const result = await communityCall<{ Success: boolean; Message?: string; Data?: { Settings?: unknown } }>('GetUserSettings');
+                if (!result.Success) throw new Error(result.Message || '读取设置失败');
+                let settings: Record<string, unknown> = {};
+                const raw = result.Data?.Settings;
+                try {
+                    const parsed = typeof raw === 'string' ? JSON.parse(raw) as unknown : raw;
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        settings = parsed as Record<string, unknown>;
+                    }
+                } catch {
+                    settings = {};
+                }
+                return settings;
+            },
+            push: async (settings: Record<string, unknown>) => {
+                const result = await communityCall<{ Success: boolean; Message?: string }>('SetUserSettings', { Settings: settings });
+                if (!result.Success) throw new Error(result.Message || '上传设置失败');
+                return settings;
+            },
+        },
+        cache: { clear: async () => ({ cleared: 0 }) },
+        source: {
+            details: async (solutionId: number) => requestJson(`/api/source-details?id=${solutionId}`, {
+                credentials: 'include',
+            }),
+            get: fetchWebSource,
+            compare: async (leftSolutionId: number, rightSolutionId: number): Promise<DiffLine[]> => {
+                const [left, right] = await Promise.all([
+                    fetchWebSource(leftSolutionId),
+                    fetchWebSource(rightSolutionId),
+                ]);
+                if (left === null || right === null) throw new Error('无法读取提交代码（可能已隐藏）');
+                return diffLines(left, right);
+            },
+            exportAcCode: unavailable,
+        },
         submit: {
             code: (request: Parameters<XmojApi['submit']['code']>[0]) => requestJson<
                 Awaited<ReturnType<XmojApi['submit']['code']>>
@@ -298,9 +379,80 @@ export function installWebApi(): void {
                 return requestJson<StatusPage>(`/api/status?${params}`);
             },
         },
-        bbs: unavailableSection,
-        mail: unavailableSection,
-        notices: unavailableSection,
+        bbs: {
+            deletePost: async (postId: number) => communityCall('DeletePost', { PostID: postId }),
+            deleteReply: async (replyId: number) => communityCall('DeleteReply', { ReplyID: replyId }),
+            editReply: async (replyId: number, content: string) =>
+                communityCall('EditReply', { ReplyID: replyId, Content: content }),
+            captcha: unavailable,
+            captchaState: async () => null,
+            onCaptchaState: noSubscription,
+            boards: async () => communityCall('GetBoards'),
+            posts: async (query: { boardId?: number; page?: number; problemId?: number } = {}) =>
+                communityCall('GetPosts', {
+                    BoardID: query.boardId ?? 0,
+                    Page: query.page ?? 1,
+                    ProblemID: query.problemId ?? 0,
+                }),
+            post: async (postId: number, page = 1) =>
+                communityCall('GetPost', { PostID: postId, Page: page }),
+            newPost: async (payload: Parameters<XmojApi['bbs']['newPost']>[0]) =>
+                communityCall('NewPost', {
+                    BoardID: payload.boardId,
+                    Title: payload.title,
+                    Content: payload.content,
+                    ProblemID: payload.problemId ?? 0,
+                    CaptchaSecretKey: payload.captchaSecretKey ?? '',
+                }),
+            newReply: async (payload: Parameters<XmojApi['bbs']['newReply']>[0]) =>
+                communityCall('NewReply', {
+                    PostID: payload.postId,
+                    Content: payload.content,
+                    CaptchaSecretKey: payload.captchaSecretKey ?? '',
+                }),
+            std: async (problemId: number) => communityCall('GetStd', { ProblemID: problemId }),
+        },
+        mail: {
+            list: async () => communityCall('GetMailList'),
+            get: async (otherUser: string) => communityCall('GetMail', { OtherUser: otherUser }),
+            send: async (toUser: string, content: string) =>
+                communityCall('SendMail', { ToUser: toUser, Content: content }),
+        },
+        notices: {
+            poll: async (): Promise<CommunityNotification[]> => {
+                const [bbs, mail] = await Promise.all([
+                    communityCall<{
+                        Success: boolean;
+                        Message?: string;
+                        Data?: { MentionList?: Array<{ MentionID: number; PostTitle?: string; PostID?: number; PageNumber?: number }> };
+                    }>('GetBBSMentionList'),
+                    communityCall<{
+                        Success: boolean;
+                        Message?: string;
+                        Data?: { MentionList?: Array<{ MentionID: number; FromUserID?: string }> };
+                    }>('GetMailMentionList'),
+                ]);
+                if (!bbs.Success) throw new Error(bbs.Message || '讨论通知暂不可用');
+                if (!mail.Success) throw new Error(mail.Message || '私信通知暂不可用');
+                return [
+                    ...(bbs.Data?.MentionList ?? []).map(mention => ({
+                        kind: 'bbs' as const,
+                        title: `${mention.PostTitle ?? '讨论区'} 有新的回复`,
+                        body: '',
+                        postId: mention.PostID,
+                        pageNumber: mention.PageNumber,
+                        mentionId: Number(mention.MentionID),
+                    })),
+                    ...(mail.Data?.MentionList ?? []).map(mention => ({
+                        kind: 'mail' as const,
+                        title: `${mention.FromUserID ?? '有人'} 给你发了私信`,
+                        body: '',
+                        mailUser: mention.FromUserID,
+                        mentionId: Number(mention.MentionID),
+                    })),
+                ];
+            },
+        },
     } as unknown as XmojApi;
     window.xmoj = api;
 }

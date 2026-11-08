@@ -1,7 +1,6 @@
-<script setup lang="ts">import { computed, onMounted, ref } from 'vue';
+<script setup lang="ts">import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
 import { useErrorToast } from '@/composables/useErrorToast';
 import { ChevronLeft, ChevronRight, RefreshCw, Trophy, Play } from '@lucide/vue';
-import ContestReplay from '@/components/ContestReplay.vue';
 import { Button } from '@/components/ui/button';
 import UserChip from '@/components/UserChip.vue';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +9,10 @@ import { fetchContestDetail, fetchContestList } from '@/services/api';
 import { useNavigation } from '@/stores/navigation';
 import { usePanel } from '@/stores/panel';
 import type { ContestDetail, ContestSummary } from '@/shared/types';
+const ContestReplay = defineAsyncComponent(() => import('@/components/ContestReplay.vue'));
 const navigation = useNavigation();
 const panel = usePanel();
+const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const contests = ref<ContestSummary[]>([]);
 const page = ref(1);
 const totalPages = ref(1);
@@ -163,7 +164,7 @@ onMounted(() => {
           <RefreshCw :class="refreshing ? 'animate-spin' : ''" />
         </Button>
         <Button
-          v-if="detail && replayAvailable"
+          v-if="detail && replayAvailable && !webBuild"
           variant="outline"
           size="sm"
           :disabled="detailLoading"
