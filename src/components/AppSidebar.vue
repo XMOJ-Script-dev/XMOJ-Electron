@@ -1,5 +1,5 @@
 <script setup lang="ts">import { computed, ref } from 'vue';
-import { ArrowLeftRight, BookText, CalendarDays, ChartNoAxesColumn, ChartPie, ChevronsUpDown, Download, FolderDown, House, Info, Loader2, LogIn, LogOut, Mail, MessagesSquare, RefreshCw, Settings, User, } from '@lucide/vue';
+import { BookText, CalendarDays, ChartNoAxesColumn, ChartPie, ChevronsUpDown, Download, FolderDown, House, Info, Loader2, LogIn, LogOut, Mail, MessagesSquare, RefreshCw, Settings, User, } from '@lucide/vue';
 import UserAvatar from '@/components/UserAvatar.vue';
 import UserChip from '@/components/UserChip.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, } from '@/components/ui/sidebar';
@@ -20,11 +20,10 @@ const mainItems = [
     { id: 'downloads' as ViewId, title: '下载', icon: Download },
     { id: 'monthly' as ViewId, title: '月赛', icon: CalendarDays },
     { id: 'discussion' as ViewId, title: '讨论', icon: MessagesSquare },
-    { id: 'compare' as ViewId, title: '代码对比', icon: ArrowLeftRight },
 ];
 const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const visibleMainItems = computed(() => webBuild
-    ? mainItems.filter(item => ['home', 'problemset', 'status', 'contests', 'monthly', 'downloads', 'discussion', 'compare'].includes(item.id))
+    ? mainItems.filter(item => ['home', 'problemset', 'status', 'contests', 'monthly', 'downloads', 'discussion'].includes(item.id))
     : mainItems);
 const footerItems = [
     { id: 'mail' as ViewId, title: '短消息', icon: Mail },
@@ -119,7 +118,7 @@ function handleSignIn(): void {
                   <UserChip v-if="username" :username="username" :avatar="false" :link="false" />
                   <span v-else class="truncate">未登录</span>
                   <span class="truncate text-xs text-muted-foreground">
-                    {{ isAuthenticated ? (isAdmin ? '管理员' : '已登录') : webBuild ? '公开浏览/登录' : '请登录' }}
+                    {{ isAuthenticated ? (isAdmin ? '管理员' : '已登录') : '请登录' }}
                   </span>
                 </div>
                 <ChevronsUpDown class="ml-auto group-data-[collapsible=icon]:hidden" />
