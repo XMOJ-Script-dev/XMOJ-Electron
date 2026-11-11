@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { parseWebRoute, pathForWebRoute, VIEWS } from '../src/stores/navigation.ts';
+import { parseWebRoute, pathForWebRoute, VIEWS } from '../src/stores/web-route.ts';
 
 const pageUrl = (path) => new URL(path, 'https://webxmoj.example');
 

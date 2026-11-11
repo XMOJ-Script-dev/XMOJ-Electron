@@ -12,6 +12,7 @@ dist
 web-dist
 dist-ssr
 .wrangler
+_worker.bundle
 # vite-plugin-electron emits the main/preload bundle here.
 dist-electron
 *.local

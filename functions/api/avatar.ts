@@ -67,6 +67,34 @@ interface PagesContext {
   env: PagesEnv;
 }
 
+function normaliseAvatarUrl(raw: string): string | null {
+  try {
+    const url = new URL(raw.replace(/&amp;/g, '&'), XMOJ_ORIGIN);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function avatarHash(url: string): string {
+  const match = url.match(/\/([a-f0-9]{32})(?:[?/]|$)/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
+function parsePageAvatar(html: string): { hash: string; url: string } | null {
+  for (const tag of html.matchAll(/<img\b[^>]*>/gi)) {
+    if (!/avatar|gravatar|cravatar/i.test(tag[0])) continue;
+    const raw = tag[0].match(/\bsrc=["']([^"']+)["']/i)?.[1];
+    if (!raw) continue;
+    const url = normaliseAvatarUrl(raw);
+    if (url) return { hash: avatarHash(url), url };
+  }
+  const direct = html.match(/https?:\/\/(?:cravatar\.cn|secure\.gravatar\.com|gravatar\.com|cn\.gravatar\.com)\/[^\s"'<>]+/i);
+  if (!direct) return null;
+  const url = normaliseAvatarUrl(direct[0]);
+  return url ? { hash: avatarHash(url), url } : null;
+}
+
 export async function onRequestGet({ request, env }: PagesContext): Promise<Response> {
   const url = new URL(request.url);
   const rawUsername = url.searchParams.get('username') ?? '';
@@ -97,14 +125,21 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
     if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
       return Response.json({ avatar: null }, { headers: { 'Cache-Control': 'no-store' } });
     }
-    const email = parseAccountEmail(await response.text());
+    const html = await response.text();
+    if (!ownAccount) {
+      return Response.json({ avatar: parsePageAvatar(html) }, {
+        headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
+      });
+    }
+
+    const email = parseAccountEmail(html);
     if (!email) return Response.json({ avatar: null }, { headers: { 'Cache-Control': 'no-store' } });
 
     const hash = md5(email.trim().toLowerCase());
     const avatarUrl = new URL(`/avatar/${hash}`, 'https://cravatar.cn');
     avatarUrl.searchParams.set('retro', '1');
     avatarUrl.searchParams.set('s', '160');
-    if (ownAccount && url.searchParams.has('cacheBust')) {
+    if (url.searchParams.has('cacheBust')) {
       avatarUrl.searchParams.set('_', String(Date.now()));
     }
     return Response.json({ avatar: { hash, url: avatarUrl.href } }, {

@@ -27,7 +27,7 @@ function encodeBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
-function decodeBase64Url(value: string): Uint8Array {
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
   const normalised = value.replace(/-/g, '+').replace(/_/g, '/');
   const binary = atob(normalised + '='.repeat((4 - normalised.length % 4) % 4));
   return Uint8Array.from(binary, char => char.charCodeAt(0));
@@ -35,7 +35,7 @@ function decodeBase64Url(value: string): Uint8Array {
 
 async function getKey(env: PagesEnv): Promise<CryptoKey> {
   if (!env.XMOJ_SESSION_KEY) throw new Error('网页版会话服务尚未配置');
-  let raw: Uint8Array;
+  let raw: Uint8Array<ArrayBuffer>;
   try {
     raw = Uint8Array.from(atob(env.XMOJ_SESSION_KEY), char => char.charCodeAt(0));
   } catch {
@@ -131,15 +131,15 @@ async function verifySession(request: Request, env: PagesEnv): Promise<Response>
   const sealed = sessionCookie(request);
   if (!sealed) return json(emptySession());
   const session = await readSession(request, env);
-  if (!session) return json(emptySession(), 401, { 'Set-Cookie': clearCookie() });
+  if (!session) return json(emptySession(), 200, { 'Set-Cookie': clearCookie() });
 
   const upstream = await fetchUpstream(`${XMOJ_ORIGIN}/loginpage.php`, {
     headers: { Cookie: upstreamCookie(session.sessionId), Accept: 'text/html' },
   }, ['www.xmoj.tech', 'xmoj.tech']).catch(() => null);
-  if (!upstream?.ok) return json(emptySession(), 401, { 'Set-Cookie': clearCookie() });
+  if (!upstream?.ok) return json({ error: '暂时无法校验网页会话，请稍后重试' }, 502);
   const html = await upstream.text();
   if (!isAlreadyLoggedInResponse(html) || isLoginGate(html)) {
-    return json(emptySession(), 401, { 'Set-Cookie': clearCookie() });
+    return json(emptySession(), 200, { 'Set-Cookie': clearCookie() });
   }
 
   return json({

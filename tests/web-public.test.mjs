@@ -41,6 +41,49 @@ test('problemset uses a bounded search and fixed upstream origin', async () => {
   assert.equal(result.problems[0].id, 100);
 });
 
+test('problemset reuses the short-lived cache without contacting upstream', async () => {
+  const store = new Map();
+  globalThis.caches = {
+    default: {
+      async match(key) {
+        return store.get(String(key))?.clone();
+      },
+      async put(key, response) {
+        store.set(String(key), response.clone());
+      },
+    },
+  };
+  try {
+    const cookie = await createWebSessionCookie();
+    let scrapedPages = 0;
+    globalThis.fetch = async (url, init) => {
+      if (String(url).endsWith('/loginpage.php')) return judgeSessionResponse(init);
+      scrapedPages += 1;
+      return new Response(
+        '<table id="problemset"><tbody><tr><td>1</td><td><a href="/problem.php?id=100">100 - Sample</a></td><td></td></tr></tbody></table>',
+        { headers: { 'Content-Type': 'text/html' } },
+      );
+    };
+    const send = () => problemset({
+      request: new Request(`${origin}/api/problemset`, {
+        headers: { Cookie: `__Host-xmoj-session=${cookie}` },
+      }),
+      env: webSessionEnv,
+    });
+    const first = await send();
+    const second = await send();
+
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    assert.equal(second.headers.get('Content-Type'), 'application/json');
+    assert.equal(scrapedPages, 1);
+    assert.deepEqual(await second.json(), await first.json());
+  }
+  finally {
+    delete globalThis.caches;
+  }
+});
+
 test('oversized problemset searches are rejected before upstream access', async () => {
   let fetched = false;
   globalThis.fetch = async () => {

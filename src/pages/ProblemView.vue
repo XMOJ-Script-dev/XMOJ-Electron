@@ -29,7 +29,7 @@ function cardMarkdown(card: ProblemCard): string {
     parts.push(htmlToMarkdown(card.html));
     return parts.filter(Boolean).join('\n\n');
 }
-async function load(): Promise<void> {
+async function load(fromForm = false): Promise<void> {
     const id = Number(problemId.value);
     if (!Number.isFinite(id) || id <= 0) {
         error.value = '请输入有效的题目编号';
@@ -48,7 +48,8 @@ async function load(): Promise<void> {
             return;
         }
         problem.value = fresh.value;
-        if (contestId.value > 0) navigation.viewContestProblem(contestId.value, id);
+        if (fromForm) navigation.viewProblem(id);
+        else if (contestId.value > 0) navigation.viewContestProblem(contestId.value, id);
         else navigation.viewProblem(id);
     }
     catch (caught) {
@@ -86,7 +87,7 @@ onMounted(() => {
           <template v-else>输入题目编号以查看题面</template>
         </p>
       </div>
-      <form class="flex flex-wrap items-center gap-2" @submit.prevent="load">
+      <form class="flex flex-wrap items-center gap-2" @submit.prevent="load(true)">
         <Input
           id="problem-view-id"
           v-model.number="problemId"

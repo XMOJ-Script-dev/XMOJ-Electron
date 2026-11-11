@@ -90,7 +90,7 @@ function validateData(action: string, value: unknown): Record<string, unknown> |
     case 'ReadBBSMention':
       return validId(data.MentionID) ? { MentionID: data.MentionID } : null;
     case 'UploadImage':
-      return text('Image', 2_800_000) &&
+      return typeof data.Image === 'string' && text('Image', 2_800_000) &&
         /^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(data.Image)
         ? { Image: data.Image } : null;
     case 'GetBadge':
@@ -155,7 +155,7 @@ async function callCommunity(
     }
   }
 
-  const auth = unauthenticated
+  const auth: Record<string, string> = unauthenticated
     ? {}
     : legacy
     ? { SessionID: credentials.sessionId, Username: credentials.username }

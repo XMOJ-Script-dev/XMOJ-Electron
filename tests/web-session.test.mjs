@@ -94,6 +94,38 @@ test('login seals upstream PHPSESSID in a Secure HttpOnly cookie only', async ()
   assert.equal(verifiedState.sessionId, null);
 });
 
+test('invalid or expired session cookies are reported as logged out', async () => {
+  let contactedUpstream = false;
+  globalThis.fetch = async () => {
+    contactedUpstream = true;
+    throw new Error('must not fetch');
+  };
+  const response = await onRequest({
+    request: new Request(`${origin}/api/session`, {
+      headers: { Cookie: '__Host-xmoj-session=not-a-valid-seal' },
+    }),
+    env,
+  });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).authenticated, false);
+  assert.match(response.headers.get('Set-Cookie'), /Max-Age=0/);
+  assert.equal(contactedUpstream, false);
+});
+
+test('upstream verification failures keep the cookie and report a service error', async () => {
+  globalThis.fetch = async () => new Response('', { status: 503 });
+  const cookieValue = await createSessionCookie();
+  const response = await onRequest({
+    request: new Request(`${origin}/api/session`, {
+      headers: { Cookie: `__Host-xmoj-session=${cookieValue}` },
+    }),
+    env,
+  });
+  assert.equal(response.status, 502);
+  assert.equal(response.headers.get('Set-Cookie'), null);
+  assert.match((await response.json()).error, /稍后重试/);
+});
+
 test('session mutations require a same-origin request', async () => {
   let contactedUpstream = false;
   globalThis.fetch = async () => {

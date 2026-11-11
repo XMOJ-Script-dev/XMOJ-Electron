@@ -6,10 +6,43 @@ import type { PagesEnv } from './session.ts';
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 const MAX_PAGES = 40;
 const PAGE_DELAY_MS = 100;
+const CACHE_TTL_SECONDS = 60;
+const CACHE_KEY = 'https://cache.xmoj.local/problemset';
 
 interface PagesContext {
   request: Request;
   env: PagesEnv;
+}
+
+function cacheStorage(): Cache | null {
+  if (typeof caches === 'undefined') return null;
+  return (caches as unknown as { default?: Cache }).default ?? null;
+}
+
+async function readCachedProblems(): Promise<string | null> {
+  const cache = cacheStorage();
+  if (!cache) return null;
+  try {
+    const hit = await cache.match(CACHE_KEY);
+    return hit ? await hit.text() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedProblems(body: string): Promise<void> {
+  const cache = cacheStorage();
+  if (!cache) return;
+  try {
+    await cache.put(CACHE_KEY, new Response(body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': `max-age=${CACHE_TTL_SECONDS}`,
+      },
+    }));
+  } catch {
+    return;
+  }
 }
 
 function error(message: string, status: number): Response {
@@ -24,6 +57,17 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
   if (search.length > 100) return error('搜索内容过长', 400);
   const authorization = await authorizeJudgeSession(request, env);
   if ('response' in authorization) return authorization.response;
+
+  const cached = search ? null : await readCachedProblems();
+  if (cached) {
+    return new Response(cached, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  }
 
   try {
     const problems = [];
@@ -46,12 +90,18 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
       if (page < totalPages) await new Promise(resolve => setTimeout(resolve, PAGE_DELAY_MS));
     }
 
-    return Response.json({
+    const payload = JSON.stringify({
       problems,
       page: 1,
       totalPages: Math.max(1, Math.ceil(problems.length / 20)),
-    }, {
-      headers: { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' },
+    });
+    if (!search) await writeCachedProblems(payload);
+    return new Response(payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
     });
   } catch {
     return error('暂时无法读取题库', 502);

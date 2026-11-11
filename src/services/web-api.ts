@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import type { XmojApi } from '../../electron/preload';
 import { SOFTWARE } from '@/shared/software';
 import { XMOJ_ORIGIN, type CommunityNotification, type ContestDetail, type ContestListPage, type ContestProblem, type ContestRank, type DiffLine, type HomeSnapshot, type LoginRequest, type MonthlyBoard, type ProblemsetPage, type ProblemDetail, type ProblemsetQuery, type StatusPage, type StatusQuery, type UserInfo, type UserProfile } from '@/shared/types';
@@ -63,27 +64,33 @@ function normaliseText(value: string | null | undefined): string {
 
 function safeHtml(element: Element): string {
     const clone = element.cloneNode(true) as Element;
-    clone.querySelectorAll('script,style,iframe,object,embed').forEach(node => node.remove());
+    clone.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(node => node.remove());
     for (const node of [clone, ...clone.querySelectorAll('*')]) {
         for (const attribute of [...node.attributes]) {
             const name = attribute.name.toLowerCase();
-            if (name.startsWith('on')) {
+            if (name.startsWith('on') || ['xlink:href', 'formaction', 'srcset'].includes(name)) {
                 node.removeAttribute(attribute.name);
             } else if (['src', 'href', 'action', 'poster'].includes(name)) {
                 const raw = attribute.value.trim();
-                if (/^\s*javascript:/i.test(raw)) {
-                    node.removeAttribute(attribute.name);
-                } else if (raw && !raw.startsWith('#') && !raw.startsWith('data:')) {
-                    try {
-                        node.setAttribute(attribute.name, new URL(raw, XMOJ_ORIGIN).href);
-                    } catch {
+                if (!raw || raw.startsWith('#')) continue;
+                try {
+                    const url = new URL(raw, XMOJ_ORIGIN);
+                    if (!['http:', 'https:'].includes(url.protocol)) {
                         node.removeAttribute(attribute.name);
+                    } else {
+                        node.setAttribute(attribute.name, url.href);
                     }
+                } catch {
+                    node.removeAttribute(attribute.name);
                 }
             }
         }
     }
-    return clone.innerHTML;
+    return DOMPurify.sanitize(clone.innerHTML, {
+        USE_PROFILES: { html: true },
+        FORBID_TAGS: ['link', 'meta', 'style'],
+        FORBID_ATTR: ['srcset', 'formaction', 'xlink:href'],
+    });
 }
 
 function parseCountdown(html: string, now: number): HomeSnapshot['countdown'] {
@@ -211,6 +218,18 @@ function cached<T>(value: T) {
     return { value, fetchedAt: Date.now(), fromCache: false };
 }
 
+const PROBLEMSET_CACHE_TTL_MS = 60_000;
+let problemsetCache: { page: ProblemsetPage; fetchedAt: number } | null = null;
+
+async function loadProblemset(cacheFirst: boolean): Promise<ProblemsetPage> {
+    if (problemsetCache && (cacheFirst || Date.now() - problemsetCache.fetchedAt < PROBLEMSET_CACHE_TTL_MS)) {
+        return problemsetCache.page;
+    }
+    const page = await requestJson<ProblemsetPage>('/api/problemset', { credentials: 'include' });
+    problemsetCache = { page, fetchedAt: Date.now() };
+    return page;
+}
+
 function unavailable(): Promise<never> {
     return Promise.reject(new Error('此功能暂未在网页版开放。'));
 }
@@ -272,7 +291,7 @@ export function installWebApi(): void {
             openLink: async (raw: string) => {
                 const url = new URL(raw);
                 if (!['http:', 'https:'].includes(url.protocol)) throw new Error('不支持此链接类型');
-                window.open(url.href, '_blank', 'noopener,noreferrer');
+                window.location.assign(url.href);
             },
             version: async () => '网页版',
             setConfirmLeave: async () => ({ enabled: false }),
@@ -290,7 +309,7 @@ export function installWebApi(): void {
                 `/api/problemset${query.search ? `?search=${encodeURIComponent(query.search)}` : ''}`,
                 { credentials: 'include' },
             )),
-            all: async () => requestJson<ProblemsetPage>('/api/problemset', { credentials: 'include' }),
+            all: async (cacheFirst = false) => loadProblemset(cacheFirst),
         },
         problem: {
             detail: async (problemId: number) => cached(await requestJson<ProblemDetail>(

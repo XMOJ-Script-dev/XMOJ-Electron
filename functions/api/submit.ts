@@ -90,7 +90,8 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
       ) {
         return response({ error: '竞赛信息格式无效，提交未发送' }, 502);
       }
-      const endTime = contestEndTimestamp(contestData.contest.endTime);
+      const contest = contestData.contest as { endTime?: unknown };
+      const endTime = contestEndTimestamp(contest.endTime);
       if (!Number.isFinite(endTime)) {
         return response({ error: '无法确认竞赛结束时间，提交未发送' }, 502);
       }

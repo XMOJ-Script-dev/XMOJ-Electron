@@ -206,6 +206,7 @@ async function changeThreadPage(delta: number): Promise<void> {
     openThread(Number(thread.value.PostID ?? 0), next);
 }
 function backToList(): void {
+    navigation.activeThread.value = null;
     navigation.navigate('discussion');
 }
 async function submitNewPost(): Promise<void> {

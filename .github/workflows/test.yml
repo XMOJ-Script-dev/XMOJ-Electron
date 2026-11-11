@@ -39,6 +39,9 @@ jobs:
       - name: Build
         run: npx vite build
 
+      - name: Build Web
+        run: npm run build:web
+
       - name: Run suites
         shell: pwsh
         run: |
@@ -51,6 +54,7 @@ jobs:
             'test:cache',
             'test:async-resource',
             'test:e2e-readiness',
+            'test:web-functions',
             'test:native-views',
             'test:cloud-settings',
             'test:markdown',
