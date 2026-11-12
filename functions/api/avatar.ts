@@ -128,7 +128,10 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
     const html = await response.text();
     if (!ownAccount) {
       return Response.json({ avatar: parsePageAvatar(html) }, {
-        headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
+        headers: {
+          'Cache-Control': 'public, max-age=300, s-maxage=900',
+          'X-Content-Type-Options': 'nosniff',
+        },
       });
     }
 

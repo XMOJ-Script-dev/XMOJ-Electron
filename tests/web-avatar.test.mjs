@@ -31,7 +31,7 @@ test('other accounts never expose an email-derived digest', async () => {
   assert.equal(response.status, 200);
   assert.equal(requested, 'https://www.xmoj.tech/userinfo.php?user=testuser');
   assert.deepEqual(await response.json(), { avatar: null });
-  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.equal(response.headers.get('Cache-Control'), 'public, max-age=300, s-maxage=900');
 });
 
 test('other accounts use the avatar URL published on the profile page', async () => {
@@ -80,6 +80,7 @@ test('own account still resolves the email digest', async () => {
       url: 'https://cravatar.cn/avatar/55502f40dc8b7c769880b10874abc9d0?retro=1&s=160',
     },
   });
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
 });
 
 test('avatar lookup rejects invalid names and does not request upstream', async () => {

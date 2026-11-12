@@ -57,3 +57,15 @@ test('Web CSP allows Turnstile scripts, frames, and connections', async () => {
         assert.match(csp, new RegExp(`${directive}[^;]*https://challenges\\.cloudflare\\.com`));
     }
 });
+
+test('the Pages build denies framing through response headers', async () => {
+    const headers = await readFile(new URL('../public/_headers', import.meta.url), 'utf8');
+    assert.match(headers, /^\s*Content-Security-Policy:\s*frame-ancestors 'none'\s*$/m);
+    assert.match(headers, /^\s*X-Frame-Options:\s*DENY\s*$/m);
+});
+
+test('the Pages build keeps SPA deep links on the automatic index.html fallback', async () => {
+    for (const relative of ['../public/404.html', '../web/404.html']) {
+        await assert.rejects(readFile(new URL(relative, import.meta.url)), /ENOENT/);
+    }
+});

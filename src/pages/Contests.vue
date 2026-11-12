@@ -152,7 +152,7 @@ watch(() => navigation.activeContestId.value, (contestId) => {
         detailRequest += 1;
         detailLoading.value = false;
         detail.value = null;
-        void load(1);
+        void load(contests.value.length === 0 ? 1 : page.value);
     }
 });
 onMounted(() => {

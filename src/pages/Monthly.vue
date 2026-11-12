@@ -22,7 +22,7 @@ async function load(): Promise<void> {
     error.value = null;
     try {
         const cached = await fetchMonthlyBoard(true);
-        if (cached.cards.length > 0) {
+        if (cached?.cards.length > 0) {
             apply(cached);
             loading.value = false;
         }

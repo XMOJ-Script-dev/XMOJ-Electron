@@ -198,6 +198,42 @@ async function getHtml(path: 'home' | 'monthly'): Promise<HtmlResponse> {
     return payload;
 }
 
+let homeSnapshotCache: HomeSnapshot | null = null;
+let homeSnapshotRequest: Promise<HomeSnapshot> | null = null;
+
+function loadHomeSnapshot(): Promise<HomeSnapshot> {
+    if (!homeSnapshotRequest) {
+        homeSnapshotRequest = getHtml('home')
+            .then(parseHome)
+            .then((snapshot) => {
+                homeSnapshotCache = snapshot;
+                return snapshot;
+            })
+            .finally(() => {
+                homeSnapshotRequest = null;
+            });
+    }
+    return homeSnapshotRequest;
+}
+
+let monthlyBoardCache: MonthlyBoard | null = null;
+let monthlyBoardRequest: Promise<MonthlyBoard> | null = null;
+
+function loadMonthlyBoard(): Promise<MonthlyBoard> {
+    if (!monthlyBoardRequest) {
+        monthlyBoardRequest = getHtml('monthly')
+            .then(parseMonthly)
+            .then((board) => {
+                monthlyBoardCache = board;
+                return board;
+            })
+            .finally(() => {
+                monthlyBoardRequest = null;
+            });
+    }
+    return monthlyBoardRequest;
+}
+
 async function requestSession(method: 'GET' | 'POST' | 'DELETE', body?: unknown) {
     const response = await fetchApi('/api/session', {
         method,
@@ -298,10 +334,10 @@ export function installWebApi(): void {
             },
         },
         home: {
-            snapshot: async () => parseHome(await getHtml('home')),
+            snapshot: async (cacheOnly = false) => (cacheOnly ? homeSnapshotCache : loadHomeSnapshot()),
         },
         monthly: {
-            board: async () => parseMonthly(await getHtml('monthly')),
+            board: async (cacheFirst = false) => (cacheFirst ? monthlyBoardCache : loadMonthlyBoard()),
         },
         downloads: {
             list: async () => SOFTWARE,
@@ -431,8 +467,10 @@ export function installWebApi(): void {
         },
         cache: {
             clear: async () => {
-                const cleared = problemsetCache ? 1 : 0;
+                const cleared = (problemsetCache ? 1 : 0) + (homeSnapshotCache ? 1 : 0) + (monthlyBoardCache ? 1 : 0);
                 clearProblemsetCache();
+                homeSnapshotCache = null;
+                monthlyBoardCache = null;
                 return { cleared };
             },
         },

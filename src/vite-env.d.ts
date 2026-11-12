@@ -5,10 +5,10 @@ declare global {
     interface Window {
         xmoj: XmojApi;
     }
-}
-interface ImportMetaEnv {
-    readonly VITE_WEB_BUILD?: string;
-}
-interface ImportMeta {
-    readonly env: ImportMetaEnv;
+    interface ImportMetaEnv {
+        readonly VITE_WEB_BUILD?: string;
+    }
+    interface ImportMeta {
+        readonly env: ImportMetaEnv;
+    }
 }
