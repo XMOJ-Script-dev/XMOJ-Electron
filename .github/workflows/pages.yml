@@ -3,11 +3,13 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [master]
-    paths: ['website/**', '.github/workflows/pages.yml']
+    paths:
+      - 'website/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: pages
@@ -16,18 +18,16 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Build website
+        run: |
+          mkdir dist
+          cp -a website/. dist/
+      - name: Publish to github-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: website
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: github-pages
+          publish_dir: ./dist
+          force_orphan: true

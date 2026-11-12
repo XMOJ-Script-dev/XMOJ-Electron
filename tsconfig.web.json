@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "web/**/*.ts",
+    "web/**/*.vue",
+    "functions/**/*.ts",
+    "electron"
+  ],
+  "exclude": ["tests", "dist", "dist-electron", "release", "web-dist"]
+}

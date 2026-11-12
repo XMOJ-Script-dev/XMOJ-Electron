@@ -39,9 +39,21 @@ jobs:
       - name: Build
         run: npx vite build
 
+      - name: Build Web
+        run: npm run build:web
+
+      - name: Install Electron binary
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'node_modules/electron/dist')) {
+            npx install-electron
+            if ($LASTEXITCODE -ne 0) { throw 'install-electron failed' }
+          }
+
       - name: Run suites
         shell: pwsh
         run: |
+          Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
           $ErrorActionPreference = 'Continue'
           $suites = @(
             'test',
@@ -51,6 +63,8 @@ jobs:
             'test:cache',
             'test:async-resource',
             'test:e2e-readiness',
+            'test:web-functions',
+            'test:pages',
             'test:native-views',
             'test:cloud-settings',
             'test:markdown',

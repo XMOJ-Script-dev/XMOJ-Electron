@@ -1,5 +1,5 @@
 <script setup lang="ts">import { computed, onMounted, ref, watch } from 'vue';
-import { Check, Copy, Loader2, RefreshCw, Send } from '@lucide/vue';
+import { Check, ChevronLeft, Copy, Loader2, RefreshCw, Send } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,7 @@ import { htmlToMarkdown } from '@/lib/markdown-copy';
 const navigation = useNavigation();
 const { copy, isCopied } = useCopy(2000);
 const problemId = ref(navigation.activeProblemId.value || 0);
+const contestId = computed(() => navigation.activeContestId.value);
 const problem = ref<ProblemDetail | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -28,7 +29,7 @@ function cardMarkdown(card: ProblemCard): string {
     parts.push(htmlToMarkdown(card.html));
     return parts.filter(Boolean).join('\n\n');
 }
-async function load(): Promise<void> {
+async function load(fromForm = false): Promise<void> {
     const id = Number(problemId.value);
     if (!Number.isFinite(id) || id <= 0) {
         error.value = '请输入有效的题目编号';
@@ -47,7 +48,9 @@ async function load(): Promise<void> {
             return;
         }
         problem.value = fresh.value;
-        navigation.activeProblemId.value = id;
+        if (fromForm) navigation.viewProblem(id);
+        else if (contestId.value > 0) navigation.viewContestProblem(contestId.value, id);
+        else navigation.viewProblem(id);
     }
     catch (caught) {
         if (current !== request) return;
@@ -58,7 +61,7 @@ async function load(): Promise<void> {
     }
 }
 function goSubmit(): void {
-    navigation.submitProblem(problem.value?.id ?? Number(problemId.value));
+    navigation.submitProblem(problem.value?.id ?? Number(problemId.value), contestId.value);
 }
 watch(() => navigation.activeProblemId.value, (id) => {
     if (id > 0 && id !== problemId.value) {
@@ -84,7 +87,7 @@ onMounted(() => {
           <template v-else>输入题目编号以查看题面</template>
         </p>
       </div>
-      <form class="flex flex-wrap items-center gap-2" @submit.prevent="load">
+      <form class="flex flex-wrap items-center gap-2" @submit.prevent="load(true)">
         <Input
           id="problem-view-id"
           v-model.number="problemId"
@@ -99,6 +102,15 @@ onMounted(() => {
         </Button>
       </form>
     </div>
+    <Button
+      v-if="contestId > 0"
+      variant="outline"
+      size="sm"
+      @click="navigation.viewContest(contestId)"
+    >
+      <ChevronLeft />
+      返回竞赛
+    </Button>
 
     <div v-if="loading && !problem" class="space-y-2">
       <Skeleton class="h-10 w-full rounded-lg" />

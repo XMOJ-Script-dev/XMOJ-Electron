@@ -1,7 +1,6 @@
-<script setup lang="ts">import { computed, onMounted, ref } from 'vue';
+<script setup lang="ts">import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useErrorToast } from '@/composables/useErrorToast';
 import { ChevronLeft, ChevronRight, RefreshCw, Trophy, Play } from '@lucide/vue';
-import ContestReplay from '@/components/ContestReplay.vue';
 import { Button } from '@/components/ui/button';
 import UserChip from '@/components/UserChip.vue';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +9,10 @@ import { fetchContestDetail, fetchContestList } from '@/services/api';
 import { useNavigation } from '@/stores/navigation';
 import { usePanel } from '@/stores/panel';
 import type { ContestDetail, ContestSummary } from '@/shared/types';
+const ContestReplay = defineAsyncComponent(() => import('@/components/ContestReplay.vue'));
 const navigation = useNavigation();
 const panel = usePanel();
+const webBuild = import.meta.env.VITE_WEB_BUILD === 'true';
 const contests = ref<ContestSummary[]>([]);
 const page = ref(1);
 const totalPages = ref(1);
@@ -25,6 +26,7 @@ const detailLoading = ref(false);
 const replayOpen = ref(false);
 const replayAvailable = computed(() => detail.value?.contest.replay === true || detail.value?.contest.replay === 'Y');
 let token = 0;
+let detailRequest = 0;
 function statusOf(contest: ContestSummary): {
     label: string;
     tone: 'running' | 'upcoming' | 'ended';
@@ -82,31 +84,42 @@ function apply(value: {
     totalPages.value = value.totalPages;
     total.value = value.total;
 }
-async function openContest(contest: ContestSummary): Promise<void> {
+async function openContest(contest: ContestSummary | number): Promise<void> {
+    const contestId = typeof contest === 'number' ? contest : contest.contestId;
+    if (typeof contest !== 'number') {
+        navigation.viewContest(contestId);
+        return;
+    }
+    const current = ++detailRequest;
+    detail.value = null;
     detailLoading.value = true;
     error.value = null;
     try {
-        const first = await fetchContestDetail(contest.contestId, true);
+        const first = await fetchContestDetail(contestId, true);
+        if (current !== detailRequest) return;
         detail.value = first.value;
         if (first.fromCache) {
-            const fresh = await fetchContestDetail(contest.contestId, false);
+            const fresh = await fetchContestDetail(contestId, false);
+            if (current !== detailRequest) return;
             detail.value = fresh.value;
         }
     }
     catch (caught) {
+        if (current !== detailRequest) return;
         error.value = caught instanceof Error ? caught.message : String(caught);
     }
     finally {
-        detailLoading.value = false;
+        if (current === detailRequest) detailLoading.value = false;
     }
 }
 function closeContest(): void {
     replayOpen.value = false;
     detail.value = null;
+    navigation.navigate('contests');
 }
 function openProblem(problemId: number | null): void {
-    if (problemId !== null)
-        navigation.viewProblem(problemId);
+    if (problemId !== null && detail.value)
+        navigation.viewContestProblem(detail.value.contest.contestId, problemId);
 }
 function problemStatusClass(status: string | null | undefined): string {
     const value = String(status ?? '').toUpperCase();
@@ -132,8 +145,22 @@ function problemStatusLabel(status: string | null | undefined): string {
     return '未作答';
 }
 const detailStatus = computed(() => (detail.value ? statusOf(detail.value.contest) : null));
+watch(() => navigation.activeContestId.value, (contestId) => {
+    if (navigation.currentView.value !== 'contests') return;
+    if (contestId > 0) void openContest(contestId);
+    else {
+        detailRequest += 1;
+        detailLoading.value = false;
+        detail.value = null;
+        void load(contests.value.length === 0 ? 1 : page.value);
+    }
+});
 onMounted(() => {
-    void load(1).catch(() => undefined);
+    if (navigation.activeContestId.value > 0) {
+        void openContest(navigation.activeContestId.value).catch(() => undefined);
+    } else {
+        void load(1).catch(() => undefined);
+    }
 });
 </script>
 
@@ -163,7 +190,7 @@ onMounted(() => {
           <RefreshCw :class="refreshing ? 'animate-spin' : ''" />
         </Button>
         <Button
-          v-if="detail && replayAvailable"
+          v-if="detail && replayAvailable && !webBuild"
           variant="outline"
           size="sm"
           :disabled="detailLoading"

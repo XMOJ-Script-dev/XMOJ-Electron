@@ -17,7 +17,13 @@ import { showDialog } from '@/stores/dialog';
 const session = useSession();
 const navigation = useNavigation();
 watch(() => navigation.activeThread.value, (target) => {
-    if (target) void openThread(target.postId, target.page);
+    if (target) void loadThread(target.postId, target.page);
+    else {
+        threadToken += 1;
+        loading.value = false;
+        thread.value = null;
+        void loadPosts();
+    }
 });
 const boards = ref<BbsBoard[]>([]);
 const selectedBoard = ref(-1);
@@ -70,12 +76,13 @@ async function mutate(action: 'editReply' | 'deleteReply' | 'deletePost', id: nu
         if (!result.Success) throw new Error(result.Message || '操作失败');
         editing.value = null;
         if (action === 'deletePost') backToList();
-        else if (thread.value) await openThread(Number(thread.value.PostID), threadPage.value);
+        else if (thread.value) await loadThread(Number(thread.value.PostID), threadPage.value);
     } catch (caught) { error.value = caught instanceof Error ? caught.message : String(caught); }
     finally { mutating.value = false; }
 }
 watch([composing, () => thread.value?.PostID], () => { captchaToken.value = ''; editing.value = null; });
 let token = 0;
+let threadToken = 0;
 async function loadBoards(cacheFirst = false): Promise<void> {
     const read = async (cacheOnly: boolean) => {
         const result = (await fetchBoards(cacheOnly)) as {
@@ -150,7 +157,11 @@ async function loadPosts(): Promise<void> {
             loading.value = false;
     }
 }
-async function openThread(postId: number, targetPage = 1): Promise<void> {
+function openThread(postId: number, targetPage = 1): void {
+    navigation.viewThread(postId, targetPage);
+}
+async function loadThread(postId: number, targetPage = 1): Promise<void> {
+    const current = ++threadToken;
     error.value = null;
     const apply = (result: {
         Success: boolean;
@@ -159,6 +170,7 @@ async function openThread(postId: number, targetPage = 1): Promise<void> {
     }) => {
         if (!result.Success)
             throw new Error(result.Message || '加载失败');
+        if (current !== threadToken) return;
         const detail = result.Data ?? null;
         if (detail && detail.PostID === undefined)
             detail.PostID = postId;
@@ -170,16 +182,18 @@ async function openThread(postId: number, targetPage = 1): Promise<void> {
     }
     catch {
     }
+    if (current !== threadToken) return;
     if (thread.value === null)
         loading.value = true;
     try {
         apply((await fetchPost(postId, targetPage, false)) as never);
     }
     catch (caught) {
+        if (current !== threadToken) return;
         error.value = caught instanceof Error ? caught.message : String(caught);
     }
     finally {
-        loading.value = false;
+        if (current === threadToken) loading.value = false;
     }
 }
 async function changeThreadPage(delta: number): Promise<void> {
@@ -189,12 +203,11 @@ async function changeThreadPage(delta: number): Promise<void> {
     const total = thread.value.PageCount ?? 1;
     if (next < 1 || next > total)
         return;
-    await openThread(Number(thread.value.PostID ?? 0), next);
+    openThread(Number(thread.value.PostID ?? 0), next);
 }
 function backToList(): void {
     navigation.activeThread.value = null;
-    thread.value = null;
-    void loadPosts();
+    navigation.navigate('discussion');
 }
 async function submitNewPost(): Promise<void> {
     if (submitting.value || !captchaToken.value || !newTitle.value.trim() || !newContent.value.trim() || newBoardId.value === null)
@@ -243,7 +256,7 @@ async function submitReply(): Promise<void> {
         if (!result.Success)
             throw new Error(result.Message || '回复失败');
         replyContent.value = '';
-        await openThread(Number(thread.value.PostID ?? 0));
+        navigation.viewThread(Number(thread.value.PostID ?? 0));
     }
     catch (caught) {
         error.value = caught instanceof Error ? caught.message : String(caught);
@@ -266,7 +279,7 @@ const replies = computed(() => (thread.value?.Reply ?? []).filter(reply => reply
 onMounted(async () => {
     await loadBoards(true);
     const target = navigation.activeThread.value;
-    if (target) await openThread(target.postId, target.page);
+    if (target) await loadThread(target.postId, target.page);
     else await loadPosts();
 });
 </script>
@@ -295,7 +308,7 @@ onMounted(async () => {
           <Plus />
           发帖
         </Button>
-        <Button variant="outline" size="icon" :disabled="loading" title="刷新" @click="thread ? openThread(Number(thread.PostID), threadPage) : loadPosts()">
+        <Button variant="outline" size="icon" :disabled="loading" title="刷新" @click="thread ? loadThread(Number(thread.PostID), threadPage) : loadPosts()">
           <RefreshCw :class="loading ? 'animate-spin' : ''" />
         </Button>
       </div>
