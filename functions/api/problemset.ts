@@ -5,7 +5,7 @@ import type { PagesEnv } from './session.ts';
 
 const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 const MAX_PAGES = 40;
-const PAGE_DELAY_MS = 100;
+const PAGE_CONCURRENCY = 6;
 const CACHE_TTL_SECONDS = 60;
 const CACHE_ORIGIN = 'https://cache.xmoj.local';
 
@@ -76,9 +76,7 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
   }
 
   try {
-    const problems = [];
-    let totalPages = 1;
-    for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
+    const fetchPage = async (page: number) => {
       const url = new URL('/problemset.php', XMOJ_ORIGIN);
       url.searchParams.set('page', String(page));
       if (search) url.searchParams.set('search', search);
@@ -87,13 +85,24 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
         signal: request.signal,
       }, ['www.xmoj.tech', 'xmoj.tech']);
       if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) {
-        return error('暂时无法读取题库', 502);
+        throw new Error('暂时无法读取题库');
       }
-      const parsed = parseProblemsetPage(await response.text(), page);
-      problems.push(...parsed.problems);
-      if (page === 1) totalPages = Math.max(1, Math.min(parsed.totalPages ?? 1, MAX_PAGES));
-      if (!parsed.problems.length) break;
-      if (page < totalPages) await new Promise(resolve => setTimeout(resolve, PAGE_DELAY_MS));
+      return parseProblemsetPage(await response.text(), page);
+    };
+
+    const first = await fetchPage(1);
+    const problems = [...first.problems];
+    const totalPages = Math.max(1, Math.min(first.totalPages ?? 1, MAX_PAGES));
+    const pending: number[] = [];
+    if (first.problems.length) {
+      for (let page = 2; page <= totalPages; page += 1) pending.push(page);
+    }
+    for (let index = 0; index < pending.length; index += PAGE_CONCURRENCY) {
+      const batch = await Promise.all(
+        pending.slice(index, index + PAGE_CONCURRENCY).map(fetchPage),
+      );
+      for (const parsed of batch) problems.push(...parsed.problems);
+      if (batch.some(parsed => parsed.problems.length === 0)) break;
     }
 
     const payload = JSON.stringify({

@@ -56,7 +56,9 @@ async function submit(): Promise<void> {
       languageId: languageId.value,
       source: source.value,
       enableO2: enableO2.value,
-      ...(props.contestId > 0 ? { contestId: props.contestId } : {}),
+      ...(props.contestId > 0 && problem.value.id === props.problemId
+        ? { contestId: props.contestId }
+        : {}),
     });
     if (!response.ok) throw new Error(response.message || '提交失败');
     result.value = response.solutionId

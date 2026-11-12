@@ -7,7 +7,7 @@ const pageUrl = (path) => new URL(path, 'https://webxmoj.example');
 
 test('all Web views have stable direct-load routes', () => {
     for (const view of VIEWS) {
-        const path = pathForWebRoute({ view: view.id, problemId: 0, thread: null });
+        const path = pathForWebRoute({ view: view.id, problemId: 0, contestId: 0, thread: null });
         assert.equal(parseWebRoute(pageUrl(path)).view, view.id, `${view.id} route`);
     }
 });

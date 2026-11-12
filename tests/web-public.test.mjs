@@ -134,6 +134,42 @@ test('problemset cache is scoped per account so solved flags cannot leak between
   }
 });
 
+test('problemset scrapes the remaining pages concurrently', async () => {
+  const cookie = await createWebSessionCookie();
+  const pages = [];
+  let inFlight = 0;
+  let peak = 0;
+  globalThis.fetch = async (url, init) => {
+    const target = String(url);
+    if (target.endsWith('/loginpage.php')) return judgeSessionResponse(init);
+    assert.equal(new Headers(init.headers).get('Cookie'), 'PHPSESSID=test-session-id');
+    const page = Number(new URL(target).searchParams.get('page'));
+    pages.push(page);
+    inFlight += 1;
+    peak = Math.max(peak, inFlight);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    inFlight -= 1;
+    const id = 100 + page;
+    return new Response(
+      '<table id="problemset"><tbody><tr><td>1</td>'
+      + `<td><a href="/problem.php?id=${id}">${id} - Sample ${page}</a></td><td></td></tr></tbody></table>`
+      + '<ul class="pagination"><li><a>1</a></li><li><a>2</a></li><li><a>3</a></li></ul>',
+      { headers: { 'Content-Type': 'text/html' } },
+    );
+  };
+  const response = await problemset({
+    request: new Request(`${origin}/api/problemset`, {
+      headers: { Cookie: `__Host-xmoj-session=${cookie}` },
+    }),
+    env: webSessionEnv,
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(pages.sort((left, right) => left - right), [1, 2, 3]);
+  assert.ok(peak >= 2, `expected concurrent page fetches, peak in-flight was ${peak}`);
+  assert.equal((await response.json()).problems.length, 3);
+});
+
 test('oversized problemset searches are rejected before upstream access', async () => {
   let fetched = false;
   globalThis.fetch = async () => {

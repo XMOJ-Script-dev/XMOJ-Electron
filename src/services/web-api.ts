@@ -226,13 +226,22 @@ function cached<T>(value: T) {
 
 const PROBLEMSET_CACHE_TTL_MS = 60_000;
 let problemsetCache: { page: ProblemsetPage; fetchedAt: number } | null = null;
+let problemsetCacheGeneration = 0;
+
+function clearProblemsetCache(): void {
+    problemsetCache = null;
+    problemsetCacheGeneration += 1;
+}
 
 async function loadProblemset(cacheFirst: boolean): Promise<ProblemsetPage> {
     if (problemsetCache && (cacheFirst || Date.now() - problemsetCache.fetchedAt < PROBLEMSET_CACHE_TTL_MS)) {
         return problemsetCache.page;
     }
+    const generation = problemsetCacheGeneration;
     const page = await requestJson<ProblemsetPage>('/api/problemset', { credentials: 'include' });
-    problemsetCache = { page, fetchedAt: Date.now() };
+    if (generation === problemsetCacheGeneration) {
+        problemsetCache = { page, fetchedAt: Date.now() };
+    }
     return page;
 }
 
@@ -253,6 +262,7 @@ export function installWebApi(): void {
                 return payload as Awaited<ReturnType<XmojApi['session']['verify']>>;
             },
             login: async ({ username, password }: LoginRequest) => {
+                clearProblemsetCache();
                 try {
                     const payload = await requestSession('POST', { username, password });
                     return payload as Awaited<ReturnType<XmojApi['session']['login']>>;
@@ -265,8 +275,12 @@ export function installWebApi(): void {
                 }
             },
             logout: async () => {
-                const payload = await requestSession('DELETE');
-                return payload as Awaited<ReturnType<XmojApi['session']['logout']>>;
+                try {
+                    const payload = await requestSession('DELETE');
+                    return payload as Awaited<ReturnType<XmojApi['session']['logout']>>;
+                } finally {
+                    clearProblemsetCache();
+                }
             },
             email: async () => {
                 const payload = await requestSession('GET') as { user?: { email?: string | null } };
@@ -355,10 +369,13 @@ export function installWebApi(): void {
         },
         nav: {
             info: async () => {
-                const payload = await requestSession('GET') as { authenticated?: boolean; user?: { username?: string; isAdmin?: boolean } };
+                const [payload, snapshot] = await Promise.all([
+                    requestSession('GET') as Promise<{ authenticated?: boolean; user?: { username?: string; isAdmin?: boolean } }>,
+                    getHtml('home').then(parseHome),
+                ]);
                 return {
                     loggedIn: payload.authenticated === true,
-                    serverTime: new Date().toISOString(),
+                    serverTime: new Date(snapshot.serverTime).toISOString(),
                     lang: 'zh',
                     userId: payload.user?.username ?? '',
                     nick: '',
@@ -412,7 +429,13 @@ export function installWebApi(): void {
                 return settings;
             },
         },
-        cache: { clear: async () => ({ cleared: 0 }) },
+        cache: {
+            clear: async () => {
+                const cleared = problemsetCache ? 1 : 0;
+                clearProblemsetCache();
+                return { cleared };
+            },
+        },
         source: {
             details: async (solutionId: number) => requestJson(`/api/source-details?id=${solutionId}`, {
                 credentials: 'include',
