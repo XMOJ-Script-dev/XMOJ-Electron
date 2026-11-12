@@ -1,5 +1,5 @@
 import { app, BrowserWindow } from 'electron';
-import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 app.whenReady().then(async () => {
@@ -18,6 +18,7 @@ app.whenReady().then(async () => {
             assert.ok(await run(`document.documentElement.scrollWidth <= innerWidth`), `no horizontal overflow at ${width}px`);
             const screenshot = await win.webContents.capturePage();
             const temp = process.platform === 'win32' && process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Temp', 'opencode') : app.getPath('temp');
+            mkdirSync(temp, { recursive: true });
             writeFileSync(path.join(temp, `xmoj-pages-${width}.png`), screenshot.toPNG());
         }
         const workflow = readFileSync('.github/workflows/pages.yml', 'utf8');

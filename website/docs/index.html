@@ -19,6 +19,7 @@
     <aside class="docs-sidebar" aria-label="文档目录">
       <strong>文档目录</strong>
       <a href="#overview">项目简介</a>
+      <a href="#web-version">桌面版与网页版</a>
       <a href="#install">下载安装</a>
       <a href="#first-run">首次使用</a>
       <a href="#features">功能指南</a>
@@ -41,12 +42,15 @@
       <p class="eyebrow">USER GUIDE · 更新于 2026</p>
       <h1>XMOJ Electron 使用文档</h1>
       <p class="docs-lead">这是一份面向使用者和开发者的完整指南，涵盖安装、日常训练流程、账号与数据、常见问题以及从源码运行。客户端版本和界面可能持续变化；下载与更新信息以项目的 <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases">GitHub Releases</a> 为准。</p>
-      <div class="callout"><strong>项目定位</strong><p>XMOJ Electron 是连接小明 OJ（xmoj.tech）的社区开源桌面客户端，不是小明 OJ 官方产品，也不是可直接在浏览器中运行的网页。判题服务、社区服务及其账号规则仍由对应服务提供方管理。</p></div>
+      <div class="callout"><strong>项目定位</strong><p>XMOJ Electron 是连接小明 OJ（xmoj.tech）的社区开源桌面客户端，不是小明 OJ 官方产品。完整功能由桌面客户端提供，另有功能受限的网页版可直接在浏览器中使用；判题服务、社区服务及其账号规则仍由对应服务提供方管理。</p></div>
 
       <section id="overview">
         <h2>项目简介</h2>
         <p>客户端将题库、题面、提交状态、赛事、讨论和个人解题记录整合到 Electron 桌面应用中。主进程负责网络请求、会话和桌面能力，界面使用 Vue 与 TypeScript 构建。</p>
         <ul><li><strong>平台：</strong>项目发布 Windows、macOS、Linux 安装包；具体平台、格式和架构以每个 Release 的文件为准。</li><li><strong>许可：</strong><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/blob/master/LICENSE">GPL-3.0</a>。</li><li><strong>所需账号：</strong>需要可正常使用的小明 OJ 账号；部分社区功能还需要社区服务可用。</li><li><strong>网络：</strong>登录及同步数据需要连接小明 OJ 或相应社区服务。少量已缓存页面可在断网时查看。</li></ul>
+        <h3 id="web-version">桌面版与网页版</h3>
+        <p>无需安装的网页版位于 <a href="https://webxmoj.xmoj-script.uk/">webxmoj.xmoj-script.uk</a>，由本项目仓库通过 Cloudflare Pages 构建；登录认证与数据转发都在服务端完成，浏览器不接触小明 OJ 的会话 Cookie。网页版可匿名浏览首页、月赛、软件下载和公开用户主页，登录后还可使用题库、题面、提交状态、竞赛、讨论、私信、通知、代码提交与云同步设置。</p>
+        <p>桌面版保留全部能力：本机文件导出、AC 代码打包、竞赛视频回放、应用更新检查、原生退出确认，以及保存在本机的登录信息与设置。网页版的偏好只保存在当前浏览器、不随账号同步，同一账号在桌面版和网页版的登录状态也互相独立。</p>
       </section>
 
       <section id="install">

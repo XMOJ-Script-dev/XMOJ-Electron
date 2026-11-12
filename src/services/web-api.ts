@@ -17,6 +17,7 @@ const EMPTY_SESSION = {
 interface HtmlResponse {
     html: string;
     serverTime: number;
+    htmlAgeMs?: number;
 }
 
 const fetchApi = createRateLimitedFetch((input, init) => fetch(input, init));
@@ -111,7 +112,7 @@ function parseCountdown(html: string, now: number): HomeSnapshot['countdown'] {
     return result.sort((left, right) => left.days - right.days);
 }
 
-function parseHome({ html, serverTime }: HtmlResponse): HomeSnapshot {
+function parseHome({ html, serverTime, htmlAgeMs }: HtmlResponse): HomeSnapshot {
     const document = new DOMParser().parseFromString(html, 'text/html');
     const announcements: HomeSnapshot['announcements'] = [];
     for (const header of document.querySelectorAll('h4.ui.block.top.attached.header')) {
@@ -146,11 +147,15 @@ function parseHome({ html, serverTime }: HtmlResponse): HomeSnapshot {
     }
     const clockText = html.match(/var\s+diff\s*=\s*new\s+Date\(\s*["']([^"']+)["']\s*\)/)?.[1];
     const parsedServerTime = clockText ? Date.parse(clockText) : Number.NaN;
+    const elapsed = typeof htmlAgeMs === 'number' && Number.isFinite(htmlAgeMs) ? Math.max(0, htmlAgeMs) : 0;
+    const extrapolated = parsedServerTime + elapsed;
+    const candidate = Number.isFinite(extrapolated) ? extrapolated : serverTime;
+    const resolved = Number.isFinite(candidate) ? candidate : Date.now();
     return {
         announcements,
         banners,
-        countdown: parseCountdown(html, serverTime),
-        serverTime: Number.isFinite(parsedServerTime) ? parsedServerTime : serverTime,
+        countdown: parseCountdown(html, resolved),
+        serverTime: resolved,
         notice: null,
     };
 }
@@ -176,12 +181,13 @@ function parseMonthly({ html, serverTime }: HtmlResponse): MonthlyBoard {
         });
     }
     const intro = document.querySelector('.col-md-4');
+    const resolved = Number.isFinite(serverTime) ? serverTime : Date.now();
     return {
         intro: intro ? safeHtml(intro) : '',
         cards,
         url: `${XMOJ_ORIGIN}/open_contest.php`,
-        countdown: parseCountdown(html, serverTime),
-        serverTime,
+        countdown: parseCountdown(html, resolved),
+        serverTime: resolved,
     };
 }
 

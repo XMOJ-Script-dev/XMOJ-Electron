@@ -26,8 +26,51 @@ test('home endpoint fetches only the fixed public XMOJ URL', async () => {
 
   assert.equal(fetchedUrl, 'https://www.xmoj.tech/');
   assert.equal(response.status, 200);
-  assert.deepEqual((await response.json()).html, '<html>home</html>');
-  assert.match(response.headers.get('Cache-Control'), /s-maxage=300/);
+  const payload = await response.json();
+  assert.equal(payload.html, '<html>home</html>');
+  assert.ok(Math.abs(payload.serverTime - Date.now()) < 5000);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+});
+
+test('cached public pages keep the html but report a fresh server time', async () => {
+  const store = new Map();
+  globalThis.caches = {
+    default: {
+      async match(key) {
+        return store.get(String(key))?.clone();
+      },
+      async put(key, response) {
+        store.set(String(key), response.clone());
+      },
+    },
+  };
+  try {
+    let scrapedPages = 0;
+    globalThis.fetch = async () => {
+      scrapedPages += 1;
+      return new Response('<html>home</html>', {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    };
+    const send = () => getHome({
+      request: new Request('https://webxmoj.example/api/home'),
+    });
+    const first = await send();
+    await new Promise(resolve => setTimeout(resolve, 25));
+    const second = await send();
+
+    assert.equal(scrapedPages, 1);
+    assert.equal(second.headers.get('Cache-Control'), 'no-store');
+    const firstBody = await first.json();
+    const secondBody = await second.json();
+    assert.equal(secondBody.html, '<html>home</html>');
+    assert.ok(firstBody.htmlAgeMs < 20);
+    assert.ok(secondBody.htmlAgeMs >= 20, 'cached pages must expose their age so the clock can be extrapolated');
+    assert.ok(secondBody.serverTime >= firstBody.serverTime + 20, 'server time must not be frozen in the cache');
+  }
+  finally {
+    delete globalThis.caches;
+  }
 });
 
 test('monthly endpoint uses the fixed public route', async () => {

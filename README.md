@@ -152,6 +152,7 @@ npm run test:cloud-settings # 云同步的**线格式**：`Settings` 必须是 J
 npm run test:codecheck # 提交前代码检查（文件 IO / 拼写 / 括号 / 头文件）
 npm run test:markdown # 公告 Markdown + KaTeX 渲染（含公式/货币等边界情形）
 npm run test:markdown-dom # Electron 中验证扩展语法的交互、布局及真实 HTML 消毒
+npm run test:pages    # 官网静态页：标题、锚点、样式表、无登录表单与桌面/移动端布局
 npm run test:smoke    # 主进程层联调：真实请求 xmoj.tech，覆盖 cookie 作用域、
                       # 会话持久化、解析，以及一次故意失败的登录
 npm run test:live     # 真实登录（需要 tests/account.txt），校验登录后的题库、

@@ -84,6 +84,56 @@ test('problemset reuses the short-lived cache without contacting upstream', asyn
   }
 });
 
+test('problemset cache is scoped per account so solved flags cannot leak between users', async () => {
+  const store = new Map();
+  globalThis.caches = {
+    default: {
+      async match(key) {
+        return store.get(String(key))?.clone();
+      },
+      async put(key, response) {
+        store.set(String(key), response.clone());
+      },
+    },
+  };
+  try {
+    const alice = await createWebSessionCookie('alice', 'alice-session');
+    const bob = await createWebSessionCookie('bob', 'bob-session');
+    const page = statusClass => '<table id="problemset"><tbody><tr><td>1</td>'
+      + '<td><a href="/problem.php?id=100">100 - Sample</a></td>'
+      + `<td><div class="status ${statusClass}"></div></td></tr></tbody></table>`;
+    let scrapedPages = 0;
+    globalThis.fetch = async (url, init) => {
+      const cookie = new Headers(init.headers).get('Cookie') ?? '';
+      if (String(url).endsWith('/loginpage.php')) {
+        return judgeSessionResponse(init, cookie.replace('PHPSESSID=', ''));
+      }
+      scrapedPages += 1;
+      return new Response(page(cookie === 'PHPSESSID=alice-session' ? 'status_y' : 'status_n'), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    };
+    const send = cookie => problemset({
+      request: new Request(`${origin}/api/problemset`, {
+        headers: { Cookie: `__Host-xmoj-session=${cookie}` },
+      }),
+      env: webSessionEnv,
+    });
+
+    const aliceFirst = await (await send(alice)).json();
+    const bobFirst = await (await send(bob)).json();
+    const aliceAgain = await (await send(alice)).json();
+
+    assert.equal(aliceFirst.problems[0].solved, true);
+    assert.equal(bobFirst.problems[0].solved, false);
+    assert.equal(aliceAgain.problems[0].solved, true);
+    assert.equal(scrapedPages, 2);
+  }
+  finally {
+    delete globalThis.caches;
+  }
+});
+
 test('oversized problemset searches are rejected before upstream access', async () => {
   let fetched = false;
   globalThis.fetch = async () => {

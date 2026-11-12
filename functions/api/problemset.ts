@@ -7,7 +7,7 @@ const XMOJ_ORIGIN = 'https://www.xmoj.tech';
 const MAX_PAGES = 40;
 const PAGE_DELAY_MS = 100;
 const CACHE_TTL_SECONDS = 60;
-const CACHE_KEY = 'https://cache.xmoj.local/problemset';
+const CACHE_ORIGIN = 'https://cache.xmoj.local';
 
 interface PagesContext {
   request: Request;
@@ -19,22 +19,28 @@ function cacheStorage(): Cache | null {
   return (caches as unknown as { default?: Cache }).default ?? null;
 }
 
-async function readCachedProblems(): Promise<string | null> {
+async function cacheKeyFor(username: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`problemset:${username}`));
+  const hex = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${CACHE_ORIGIN}/problemset/${hex}`;
+}
+
+async function readCachedProblems(username: string): Promise<string | null> {
   const cache = cacheStorage();
   if (!cache) return null;
   try {
-    const hit = await cache.match(CACHE_KEY);
+    const hit = await cache.match(await cacheKeyFor(username));
     return hit ? await hit.text() : null;
   } catch {
     return null;
   }
 }
 
-async function writeCachedProblems(body: string): Promise<void> {
+async function writeCachedProblems(username: string, body: string): Promise<void> {
   const cache = cacheStorage();
   if (!cache) return;
   try {
-    await cache.put(CACHE_KEY, new Response(body, {
+    await cache.put(await cacheKeyFor(username), new Response(body, {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': `max-age=${CACHE_TTL_SECONDS}`,
@@ -58,7 +64,7 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
   const authorization = await authorizeJudgeSession(request, env);
   if ('response' in authorization) return authorization.response;
 
-  const cached = search ? null : await readCachedProblems();
+  const cached = search ? null : await readCachedProblems(authorization.session.username);
   if (cached) {
     return new Response(cached, {
       headers: {
@@ -95,7 +101,7 @@ export async function onRequestGet({ request, env }: PagesContext): Promise<Resp
       page: 1,
       totalPages: Math.max(1, Math.ceil(problems.length / 20)),
     });
-    if (!search) await writeCachedProblems(payload);
+    if (!search) await writeCachedProblems(authorization.session.username, payload);
     return new Response(payload, {
       headers: {
         'Content-Type': 'application/json',
