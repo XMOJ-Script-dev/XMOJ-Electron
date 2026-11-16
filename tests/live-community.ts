@@ -19,7 +19,7 @@ for (const line of raw.split(/\r?\n/)) {
         fields[m[1].toLowerCase()] = m[2];
 }
 const http = new HttpClient();
-const login = await http.post(`${XMOJ_ORIGIN}/login.php`, {
+await http.post(`${XMOJ_ORIGIN}/login.php`, {
     user_id: fields.username!,
     password: fields.password!,
     submit: '登录',

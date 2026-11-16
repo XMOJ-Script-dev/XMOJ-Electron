@@ -553,9 +553,10 @@ function registerIpc(): void {
             return { ok: false, status: 0, data: null, error: '只允许请求 https 地址' };
         }
         try {
-            const response = await fetch(url, {
+            const response = await net.fetch(url, {
                 headers: { Accept: 'application/json', 'User-Agent': `XMOJ-Electron/${appVersion()}` },
                 redirect: 'follow',
+                credentials: 'omit',
             });
             const text = await response.text();
             if (!response.ok) {

@@ -1,3 +1,4 @@
+import type { ThemePreference } from '../src/stores/preferences.ts';
 let failures = 0;
 let passes = 0;
 function check(label: string, condition: boolean, detail = '') {
@@ -283,7 +284,7 @@ console.log('\n=== preferences: applySyncedSettings ===');
     const bad = prefs.applySyncedSettings({ __version: 2, animations: 'yes' as unknown as boolean });
     check('wrong type rejected', bad.rejected.includes('animations') && bad.applied === 0, JSON.stringify(bad));
     check('rejected key does not corrupt state', prefs.usePreferences().preferences.animations === true);
-    const badTheme = prefs.applySyncedSettings({ __version: 2, theme: 'blue' as unknown as prefs.ThemePreference });
+    const badTheme = prefs.applySyncedSettings({ __version: 2, theme: 'blue' as unknown as ThemePreference });
     check('invalid theme enum rejected', badTheme.rejected.includes('theme') && prefs.usePreferences().preferences.theme === 'dark', JSON.stringify(badTheme));
     const low = prefs.applySyncedSettings({ __version: 2, autoRefreshSeconds: 3 });
     check('autoRefreshSeconds below 5 rejected', low.rejected.includes('autoRefreshSeconds'), JSON.stringify(low));
@@ -302,15 +303,18 @@ console.log('\n=== preferences: applySyncedSettings ===');
     check('reset persisted', (JSON.parse(storageMap.get(KEY) ?? '{}') as any).theme === 'auto');
 }
 console.log('\n=== preferences: load() merge & corruption (fresh module instances) ===');
+function freshPreferences(seed: string): Promise<typeof prefs> {
+    return import(`../src/stores/preferences.ts?seed=${seed}`);
+}
 {
     storageMap.set(KEY, '{"theme":"dark","animations":"no","units":false,"bogus":1}');
-    const fresh = await import('../src/stores/preferences.ts?seed=merge');
+    const fresh = await freshPreferences('merge');
     check('valid keys merged over defaults', fresh.usePreferences().preferences.theme === 'dark', String(fresh.usePreferences().preferences.theme));
     check('wrong-typed value falls back to default', fresh.usePreferences().preferences.animations === true);
     check('explicit false survives merge', fresh.usePreferences().preferences.units === false);
     check('unknown keys ignored', !('bogus' in fresh.usePreferences().preferences));
     storageMap.set(KEY, '{{{not json');
-    const corrupt = await import('../src/stores/preferences.ts?seed=corrupt');
+    const corrupt = await freshPreferences('corrupt');
     check('corrupt storage falls back to defaults', corrupt.usePreferences().preferences.theme === 'auto' && corrupt.usePreferences().preferences.autoRefreshSeconds === 10);
     check('corrupt storage: collect still works', (corrupt.collectSyncedSettings() as any).__version === 2);
     storageMap.delete(KEY);

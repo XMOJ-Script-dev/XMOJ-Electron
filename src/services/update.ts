@@ -1,4 +1,4 @@
-import { XMOJ_ORIGIN, XMOJ_SCRIPT_ORIGIN, type DialogButton } from '@/shared/types';
+import { XMOJ_ORIGIN, type DialogButton } from '@/shared/types';
 import { showDialog } from '@/stores/dialog';
 export type UpdateStatus = 'available' | 'current' | 'unknown';
 export interface UpdateEntry {
@@ -18,23 +18,18 @@ export interface UpdateCheckResult {
     entries: UpdateEntry[];
     message?: string;
 }
-interface RawUpdateHistory {
-    [version: string]: {
-        UpdateDate?: number;
-        Prerelease?: boolean;
-        UpdateContents?: {
-            PR?: number;
-            Description?: string;
-        }[];
-        Notes?: string;
-    };
-}
-interface UpdateManifest {
-    UpdateHistory?: RawUpdateHistory;
+const RELEASE_PAGE_URL = 'https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases';
+const LATEST_RELEASE_URL = 'https://api.github.com/repos/XMOJ-Script-dev/XMOJ-Electron/releases/latest';
+interface GitHubRelease {
+    tag_name: string;
+    draft: boolean;
+    prerelease: boolean;
+    published_at: string | null;
+    body: string | null;
 }
 function compareVersions(a: string, b: string): number {
     const parse = (value: string) => {
-        const cleaned = String(value ?? '').trim().replace(/^v/i, '');
+        const cleaned = String(value ?? '').trim().replace(/^v/i, '').split('+')[0];
         const match = cleaned.match(/^(.*?)(?:-(.+))?$/);
         const numbers = (match?.[1] ?? '')
             .split(/[.+]/)
@@ -55,21 +50,9 @@ function compareVersions(a: string, b: string): number {
         return left.prerelease ? -1 : 1;
     return 0;
 }
-function toEntry(version: string, raw: RawUpdateHistory[string]): UpdateEntry {
-    return {
-        version,
-        date: typeof raw.UpdateDate === 'number' ? raw.UpdateDate : null,
-        prerelease: raw.Prerelease === true,
-        items: (raw.UpdateContents ?? []).map((item) => ({
-            title: item.PR ? `#${item.PR}` : '',
-            description: String(item.Description ?? ''),
-        })),
-        notes: String(raw.Notes ?? ''),
-    };
-}
 export async function checkAppUpdate(): Promise<UpdateCheckResult> {
     const current = await window.xmoj.app.version();
-    const response = await window.xmoj.app.fetchJson(`${XMOJ_SCRIPT_ORIGIN}/Update.json`);
+    const response = await window.xmoj.app.fetchJson(LATEST_RELEASE_URL);
     if (!response.ok || !response.data) {
         return {
             status: 'unknown',
@@ -79,26 +62,25 @@ export async function checkAppUpdate(): Promise<UpdateCheckResult> {
             message: response.error ?? `HTTP ${response.status}`,
         };
     }
-    const manifest = response.data as UpdateManifest;
-    const history = manifest.UpdateHistory ?? {};
-    const versions = Object.keys(history);
-    if (versions.length === 0) {
-        return { status: 'unknown', current, latest: null, entries: [], message: '更新信息为空' };
+    const release = response.data as Partial<GitHubRelease>;
+    if (typeof release.tag_name !== 'string' || !/^v?\d+\.\d+\.\d+(?:\+[\w.-]+)?$/i.test(release.tag_name)
+        || release.draft !== false || release.prerelease !== false) {
+        return { status: 'unknown', current, latest: null, entries: [], message: '没有有效的 Electron 正式版本记录' };
     }
-    const sorted = versions.slice().sort(compareVersions);
-    const newestStable = [...sorted].reverse().find((version) => history[version]?.Prerelease !== true);
-    if (!newestStable) {
-        return { status: 'unknown', current, latest: null, entries: [], message: '没有正式版本记录' };
-    }
-    const newest = sorted[sorted.length - 1];
-    const entries = [newestStable, newest]
-        .filter((version, index, list) => list.indexOf(version) === index)
-        .map((version) => toEntry(version, history[version]));
-    const status: UpdateStatus = compareVersions(current, newestStable) < 0 ? 'available' : 'current';
+    const latest = release.tag_name.replace(/^v/i, '');
+    const date = typeof release.published_at === 'string' ? Date.parse(release.published_at) : NaN;
+    const entries: UpdateEntry[] = [{
+        version: latest,
+        date: Number.isFinite(date) ? date : null,
+        prerelease: false,
+        items: [],
+        notes: typeof release.body === 'string' ? release.body : '',
+    }];
+    const status: UpdateStatus = compareVersions(current, latest) < 0 ? 'available' : 'current';
     return {
         status,
         current,
-        latest: newestStable,
+        latest,
         entries,
     };
 }
@@ -107,9 +89,8 @@ export function projectLinks(): {
     url: string;
 }[] {
     return [
-        { label: '脚本官网', url: XMOJ_SCRIPT_ORIGIN },
         { label: '判题站', url: XMOJ_ORIGIN },
-        { label: '更新日志', url: `${XMOJ_SCRIPT_ORIGIN}/Update.json` },
+        { label: '更新日志', url: RELEASE_PAGE_URL },
         { label: '问题反馈', url: 'https://github.com/XMOJ-Script-dev/XMOJ-Electron/issues' },
     ];
 }
@@ -141,7 +122,6 @@ export async function showAboutDialog(): Promise<void> {
         cancelId: 'ok',
     });
 }
-const RELEASE_PAGE_URL = 'https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases';
 function formatUpdateDate(value: number | null): string {
     if (value === null)
         return '';

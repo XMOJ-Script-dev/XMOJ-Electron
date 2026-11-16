@@ -1,4 +1,3 @@
-import assert from 'node:assert/strict';
 import { parseProblemsetPage, parseStatusPage, parseCountdown, describeVerdictCode, classifyVerdict, verdictCodeFromLabel, JUDGE_PENDING_THRESHOLD } from '../electron/parsers.ts';
 import { parseContestRank, fetchContestRank } from '../electron/rank.ts';
 import { fetchSource } from '../electron/sources.ts';
