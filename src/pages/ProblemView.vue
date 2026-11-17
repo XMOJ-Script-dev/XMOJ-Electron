@@ -1,10 +1,12 @@
 <script setup lang="ts">import { computed, onMounted, ref, watch } from 'vue';
-import { Check, Copy, Loader2, RefreshCw, Send } from '@lucide/vue';
+import { BookOpen, Check, Copy, Loader2, RefreshCw, Send } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import AnnouncementBody from '@/components/AnnouncementBody.vue';
-import { fetchProblemDetail } from '@/services/api';
+import CodeEditor from '@/components/CodeEditor.vue';
+import { fetchProblemDetail, fetchStdCode } from '@/services/api';
 import { useCopy } from '@/composables/useClipboard';
 import { useErrorToast } from '@/composables/useErrorToast';
 import { useNavigation } from '@/stores/navigation';
@@ -19,9 +21,12 @@ const error = ref<string | null>(null);
 useErrorToast(error);
 const std = ref<string | null>(null);
 const stdError = ref<string | null>(null);
+const stdLoading = ref(false);
+const stdDialogOpen = ref(false);
 const statementText = computed(() => cards.value.map(card => `## ${card.title}\n\n${cardMarkdown(card)}`).join('\n\n'));
 const cards = computed(() => problem.value?.cards ?? []);
 let request = 0;
+let stdRequest = 0;
 function cardMarkdown(card: ProblemCard): string {
     const parts = card.isSamples ? card.samples.map((sample, index) =>
         `### 样例输入 #${index + 1}\n\n\`\`\`\n${sample.input}\n\`\`\`\n\n### 样例输出 #${index + 1}\n\n\`\`\`\n${sample.output}\n\`\`\``) : [];
@@ -37,6 +42,8 @@ async function load(): Promise<void> {
     loading.value = true;
     const current = ++request;
     error.value = null;
+    stdRequest += 1;
+    stdLoading.value = false;
     std.value = null;
     stdError.value = null;
     try {
@@ -59,6 +66,37 @@ async function load(): Promise<void> {
 }
 function goSubmit(): void {
     navigation.submitProblem(problem.value?.id ?? Number(problemId.value));
+}
+async function loadStd(id: number): Promise<void> {
+    const current = ++stdRequest;
+    stdLoading.value = true;
+    std.value = null;
+    stdError.value = null;
+    try {
+        const result = (await fetchStdCode(id)) as {
+            Success: boolean;
+            Message?: string;
+            Data?: {
+                StdCode?: string;
+            };
+        };
+        if (current !== stdRequest) return;
+        if (!result.Success)
+            throw new Error(result.Message || '标程加载失败');
+        std.value = result.Data?.StdCode || null;
+    }
+    catch (caught) {
+        if (current !== stdRequest) return;
+        stdError.value = caught instanceof Error ? caught.message : String(caught);
+    }
+    finally {
+        if (current === stdRequest) stdLoading.value = false;
+    }
+}
+function openStd(): void {
+    stdDialogOpen.value = true;
+    if (!stdLoading.value && !std.value && problem.value)
+        void loadStd(problem.value.id);
 }
 watch(() => navigation.activeProblemId.value, (id) => {
     if (id > 0 && id !== problemId.value) {
@@ -121,6 +159,10 @@ onMounted(() => {
           <Button size="sm" @click="goSubmit">
             <Send />
             提交代码
+          </Button>
+          <Button size="sm" variant="outline" @click="openStd">
+            <BookOpen />
+            查看标程
           </Button>
           <Button size="sm" variant="outline" @click="copy(statementText, 'statement')">
             <Check v-if="isCopied('statement')" />
@@ -199,5 +241,27 @@ onMounted(() => {
     >
       还没有载入题目
     </div>
+
+    <Dialog v-model:open="stdDialogOpen">
+      <DialogContent class="grid max-h-[90vh] gap-3 overflow-y-auto sm:max-w-[min(72rem,92vw)]">
+        <DialogTitle>标程 · #{{ problem?.id }}</DialogTitle>
+        <DialogDescription class="sr-only">该题的标准程序</DialogDescription>
+        <div v-if="stdLoading" class="flex justify-center py-12">
+          <Loader2 class="animate-spin" />
+        </div>
+        <p v-else-if="stdError" class="text-sm text-muted-foreground">{{ stdError }}</p>
+        <div v-else-if="std" class="space-y-2">
+          <div class="flex justify-end">
+            <Button variant="outline" size="sm" @click="copy(std, 'std')">
+              <Check v-if="isCopied('std')" />
+              <Copy v-else />
+              复制代码
+            </Button>
+          </div>
+          <CodeEditor :model-value="std" :language-id="1" readonly height="60vh" />
+        </div>
+        <p v-else class="text-sm text-muted-foreground">该题暂无标程</p>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

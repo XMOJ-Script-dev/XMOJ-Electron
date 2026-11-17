@@ -4,7 +4,7 @@ import { Download, FolderOpen, Loader2 } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { exportAcCode, fetchProblemset, fetchUserProfile } from '@/services/api';
+import { exportAcCode, fetchAllProblems, fetchUserProfile } from '@/services/api';
 import { useSession } from '@/stores/session';
 import type { ExportResult, ProblemsetEntry } from '@/shared/types';
 const LANGUAGE_FILTERS = ['C++', 'C', 'Pascal'];
@@ -29,9 +29,9 @@ async function load(): Promise<void> {
         const username = session.state.user?.username;
         if (!username) throw new Error('请先登录');
         const profile = await fetchUserProfile(username);
-        const first = await fetchProblemset({ page: 1 }, true).catch(() => null);
+        const all = await fetchAllProblems(true).catch(() => null);
         if (current !== token) return;
-        const titles = new Map(first?.value.problems.map(problem => [problem.id, problem.title]) ?? []);
+        const titles = new Map(all?.problems.map(problem => [problem.id, problem.title]) ?? []);
         problems.value = profile.problems.map(problem => ({ id: problem.id, title: titles.get(problem.id) ?? `题目 ${problem.id}`, url: problem.url, solved: true, accepted: null, submissions: problem.attempts, acceptanceRate: null }));
     }
     catch (caught) {

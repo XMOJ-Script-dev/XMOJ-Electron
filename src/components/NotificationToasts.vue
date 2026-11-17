@@ -1,14 +1,16 @@
 <script setup lang="ts">import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { Bell, Mail, X } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
-import { pollNotices } from '@/services/api';
+import { pollNotices, markBbsMentionRead, markMailMentionRead } from '@/services/api';
 import { createPoller } from '@/lib/poller';
 import { useSession } from '@/stores/session';
 import { useNavigation } from '@/stores/navigation';
+import { useMailTarget } from '@/stores/mail-target';
 import type { CommunityNotification } from '@/shared/types';
 const POLL_INTERVAL_MS = 60000;
 const session = useSession();
 const navigation = useNavigation();
+const mailTarget = useMailTarget();
 const notices = ref<CommunityNotification[]>([]);
 const seen = new Set<string>();
 let seenUser = '';
@@ -43,9 +45,12 @@ function open(notice: CommunityNotification): void {
     if (notice.kind === 'bbs') {
         if (notice.postId) navigation.viewThread(notice.postId, notice.pageNumber || 1);
         else navigation.navigate('discussion');
+        void markBbsMentionRead(notice.mentionId).catch(() => {});
     }
     else {
+        if (notice.mailUser) mailTarget.setTarget(notice.mailUser);
         navigation.navigate('mail');
+        void markMailMentionRead(notice.mentionId).catch(() => {});
     }
     dismiss(notice);
 }

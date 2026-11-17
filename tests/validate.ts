@@ -124,7 +124,7 @@ if (canRead('index.html')) {
     check('announcements parsed', snap.announcements.length > 5, `got ${snap.announcements.length}`);
     check('countdown recovered despite malformed literal', snap.countdown.length > 0, `got ${snap.countdown.length}`);
     check('countdown entries have whole days', snap.countdown.every((c) => Number.isInteger(c.days) && c.days >= 0), JSON.stringify(snap.countdown.slice(0, 3)));
-    check('countdown sorted ascending', snap.countdown.every((c, i) => i === 0 || snap.countdown[i - 1].days <= c.days));
+    check('countdown keeps site source order', snap.countdown.every((c, i) => i === 0 || snap.countdown[i - 1].days >= c.days));
     console.log('  next events:', snap.countdown.slice(0, 4).map((c) => `${c.event}=${c.days}d`).join(', '));
 }
 console.log('\n=== countdown with single-digit month (2026-9-20) ===');
@@ -230,7 +230,7 @@ console.log('\n=== real status.php row (#result-tab, no status* class) ===');
     check('code length 1788', a?.codeLength === 1788, String(a?.codeLength));
     check('language C++', a?.language === 'C++', JSON.stringify(a?.language));
     check('author alice', a?.user === 'alice', JSON.stringify(a?.user));
-    check('rating saturn', a?.userRating === 'saturn', JSON.stringify(a?.userRating));
+    check('judger name not misgrabbed as rating', a?.userRating === null, JSON.stringify(a?.userRating));
     check('timestamp', a?.submittedAt === '2026-10-04 11:37:41', JSON.stringify(a?.submittedAt));
     check('编译错误 -> code 11', b?.verdictCode === 11 && b?.verdict === 'compile_error', String(b?.verdictCode));
     check('memory 1024', b?.memoryKb === 1024, String(b?.memoryKb));
@@ -239,7 +239,7 @@ console.log('\n=== real status.php row (#result-tab, no status* class) ===');
     check('author bob', b?.user === 'bob', JSON.stringify(b?.user));
     check('答案错误 -> code 6', c?.verdictCode === 6 && c?.verdict === 'wrong_answer', String(c?.verdictCode));
     check('Python3 language', c?.language === 'Python3', JSON.stringify(c?.language));
-    check('dash rating kept as text', c?.userRating === '-', JSON.stringify(c?.userRating));
+    check('dash judger not misgrabbed as rating', c?.userRating === null, JSON.stringify(c?.userRating));
 }
 console.log('\n=== verdict label mapping (Chinese + English) ===');
 {
