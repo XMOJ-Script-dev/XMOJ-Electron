@@ -125,16 +125,17 @@ onMounted(() => {
           <template v-else>输入题目编号以查看题面</template>
         </p>
       </div>
-      <Button
-        v-if="contestId > 0"
-        variant="outline"
-        size="sm"
-        @click="navigation.viewContest(contestId)"
-      >
-        <ChevronLeft />
-        返回竞赛
-      </Button>
       <form class="flex flex-wrap items-center gap-2" @submit.prevent="load(true)">
+        <Button
+          v-if="contestId > 0"
+          type="button"
+          variant="outline"
+          size="sm"
+          @click="navigation.viewContest(contestId)"
+        >
+          <ChevronLeft />
+          返回竞赛
+        </Button>
         <Input
           id="problem-view-id"
           v-model.number="problemId"
