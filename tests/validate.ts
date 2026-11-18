@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { CookieJar, isTrustedHost } from '../electron/http.ts';
-import { parseHomeSnapshot, parseProblemsetPage, parseStatusPage, parseProfile, parseProfileScript, parseServerTime, parseLoginAlert, isAlreadyLoggedInResponse, isLoginFailureAlert, isLoginGate, isLoginForm, parseCountdown, describeVerdictCode, verdictCodeFromLabel, extractSubmissionId, formatMemory, formatTime, } from '../electron/parsers.ts';
+import { parseHomeSnapshot, parseProblemsetPage, parseStatusPage, parseProfile, parseServerTime, parseLoginAlert, isAlreadyLoggedInResponse, isLoginFailureAlert, isLoginGate, isLoginForm, parseCountdown, describeVerdictCode, verdictCodeFromLabel, extractSubmissionId, formatMemory, formatTime, } from '../electron/parsers.ts';
 const here = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const skippedFixtures: string[] = [];
 const canRead = (name: string): boolean => {

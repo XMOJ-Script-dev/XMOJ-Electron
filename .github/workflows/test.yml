@@ -44,7 +44,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           $suites = @(
-            'test',
+            'test:offline',
             'test:poller',
             'test:codecheck',
             'test:diff',

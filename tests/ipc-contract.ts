@@ -136,6 +136,13 @@ for (const { channel, key, bridgePath } of MENTION_PAIRS) {
     const handlerBody = mainSrc.slice(handlerIdx, handlerIdx + 500);
     check(`main IPC.${key} handler 校验 mentionId`, /mentionId/.test(handlerBody) && /isSafeInteger/.test(handlerBody));
 }
+console.log('\n=== ⑤ JSON 请求使用 Electron 网络栈 ===');
+const jsonHandlerStart = mainSrc.indexOf('handle<JsonFetchResult>(IPC.appFetchJson,');
+const jsonHandlerEnd = mainSrc.indexOf('\n    handle<', jsonHandlerStart + 1);
+const jsonHandler = mainSrc.slice(jsonHandlerStart, jsonHandlerEnd);
+check('appFetchJson 使用 net.fetch 而非 Node fetch', /await net\.fetch\(url,/.test(jsonHandler) && !/await fetch\(/.test(jsonHandler));
+check('公开 JSON 请求不携带会话凭据', /credentials: 'omit'/.test(jsonHandler));
+check('JSON 请求仍限制 HTTPS', jsonHandler.includes('只允许请求 https 地址'));
 console.log(`\nIPC 常量: ${ipcTable.size} | preload invoke/on/send: ${preloadInvokes.size}/${preloadOns.size}/${preloadSends.size} | main handle/on/send: ${mainRegistered.size}/${mainOns.size}/${mainSends.size} | api 路径: ${apiCalls.size}`);
 console.log(`\n结果: ${passes} PASS, ${failures} FAIL`);
 process.exit(failures ? 1 : 0);

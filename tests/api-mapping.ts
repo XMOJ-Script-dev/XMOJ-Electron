@@ -127,7 +127,7 @@ console.log('\n=== fetchContestDetail: contest.creator 映射 + problems 规整 
     check('请求路径 /api/contest/{id}/A', http.calls[0]!.includes('/api/contest/10786/A'), http.calls[0]);
     const contest = res.data?.contest;
     check('contest.creator 缺失时取 createdBy', contest?.creator === 'alice', JSON.stringify(contest?.creator));
-    check('contest.createdBy 被剥离', contest && !('createdBy' in contest), JSON.stringify(contest));
+    check('contest.createdBy 被剥离', contest !== undefined && !('createdBy' in contest), JSON.stringify(contest));
     check('contest 其他字段透传', contest?.title === '周赛' && contest?.defunct === 'N', JSON.stringify(contest));
     const problems = res.data?.problems ?? [];
     check('4 道题目', problems.length === 4, String(problems.length));

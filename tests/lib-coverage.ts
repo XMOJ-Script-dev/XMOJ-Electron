@@ -20,74 +20,74 @@ function check(label: string, condition: boolean, detail = '') {
 }
 console.log('\n=== markdown-extensions: 折叠块（:::info/success/warning/error） ===');
 {
-    const html = markdown.parse(':::info\nhello **world**\n:::');
+    const html = await markdown.parse(':::info\nhello **world**\n:::');
     check('info 折叠块 details 结构', html.includes('<details class="markdown-callout callout-info">'), html);
     check('info 默认 summary 为指令名', html.includes('<summary>info</summary>'), html);
     check('info 内容保留', html.includes('hello <strong>world</strong>'), html);
 }
 {
-    const html = markdown.parse(':::success{open}\nyes\n:::');
+    const html = await markdown.parse(':::success{open}\nyes\n:::');
     check('success{open} 带 open 属性', html.includes('<details class="markdown-callout callout-success" open>'), html);
 }
 {
-    const html = markdown.parse(':::warning[注意标题]\nbe careful\n:::');
+    const html = await markdown.parse(':::warning[注意标题]\nbe careful\n:::');
     check('warning[label] 自定义 summary', html.includes('<summary>注意标题</summary>'), html);
     check('warning callout class', html.includes('callout-warning'), html);
 }
 {
-    const html = markdown.parse(':::error\nbroken\n:::');
+    const html = await markdown.parse(':::error\nbroken\n:::');
     check('error 折叠块', html.includes('<details class="markdown-callout callout-error">'), html);
     check('error 内容', html.includes('broken'), html);
 }
 console.log('\n=== markdown-extensions: 未知指令保留原文 ===');
 {
-    const html = markdown.parse(':::unknown\nsecret content\n:::');
+    const html = await markdown.parse(':::unknown\nsecret content\n:::');
     check('未知指令不产生 details', !html.includes('<details'), html);
     check('未知指令保留原文', html.includes(':::unknown') && html.includes('secret content'), html);
 }
 console.log('\n=== markdown-extensions: 未闭合指令不吞内容 ===');
 {
-    const html = markdown.parse(':::info\nnever closed\n\nafter paragraph');
+    const html = await markdown.parse(':::info\nnever closed\n\nafter paragraph');
     check('未闭合指令不产生 details', !html.includes('<details'), html);
     check('未闭合指令保留标记行', html.includes(':::info'), html);
     check('未闭合指令后续内容仍在', html.includes('never closed') && html.includes('after paragraph'), html);
 }
 console.log('\n=== markdown-extensions: :::align ===');
 {
-    const center = markdown.parse(':::align{center}\n居中\n:::');
+    const center = await markdown.parse(':::align{center}\n居中\n:::');
     check('align{center} 生成 center 类', center.includes('<div class="markdown-align markdown-align-center">'), center);
-    const right = markdown.parse(':::align{right}\n右\n:::');
+    const right = await markdown.parse(':::align{right}\n右\n:::');
     check('align{right} 生成 right 类', right.includes('markdown-align-right'), right);
-    const fallback = markdown.parse(':::align\n默认\n:::');
+    const fallback = await markdown.parse(':::align\n默认\n:::');
     check('align 无属性默认 left', fallback.includes('markdown-align-left'), fallback);
-    const body = markdown.parse(':::align{center}\n多行**内容**\n:::');
+    const body = await markdown.parse(':::align{center}\n多行**内容**\n:::');
     check('align 内容被解析', body.includes('<strong>内容</strong>'), body);
 }
 console.log('\n=== markdown-extensions: 表格 < 合并 / ^ 纵向合并 ===');
 {
-    const html = markdown.parse('| A | B |\n|---|---|\n| a | < |\n| b | c |');
+    const html = await markdown.parse('| A | B |\n|---|---|\n| a | < |\n| b | c |');
     check('`<` 触发 colspan=2', html.includes('<td colspan="2">a</td>'), html);
     check('合并后第二个单元格消失', !/<td[^>]*>&lt;<\?\/td>/.test(html) && !html.includes('<>'), html);
     check('普通行不受影响', html.includes('<td>b</td>') && html.includes('<td>c</td>'), html);
 }
 {
-    const html = markdown.parse('| A | B |\n|---|---|\n| x | y |\n| ^ | z |');
+    const html = await markdown.parse('| A | B |\n|---|---|\n| x | y |\n| ^ | z |');
     check('`^` 触发 rowspan=2', html.includes('<td rowspan="2">x</td>'), html);
     check('首列第二行被吞并', (html.match(/<td rowspan="2">x<\/td><td>y<\/td>/g) ?? []).length === 1, html);
 }
 {
-    const html = markdown.parse('| A | B |\n|---|---|\n| a | b |\n| < | c |');
+    const html = await markdown.parse('| A | B |\n|---|---|\n| a | b |\n| < | c |');
     check('行首 `<`（c=0）不合并，保留原文', html.includes('&lt;'), html);
 }
 console.log('\n=== markdown-extensions: 代码块 lines= 高亮 ===');
 {
-    const html = markdown.parse('```cpp lines=2\nint a;\nint b;\nint c;\n```');
+    const html = await markdown.parse('```cpp lines=2\nint a;\nint b;\nint c;\n```');
     check('生成 3 行 code-line 结构', (html.match(/data-line="/g) ?? []).length === 3, html);
     check('第 2 行高亮', html.includes('class="code-line code-line-highlight" data-line="2"'), html);
     check('第 1、3 行不高亮', !html.includes('code-line-highlight" data-line="1"') && !html.includes('code-line-highlight" data-line="3"'), html);
-    const range = markdown.parse('```python lines=1-2\nx = 1\ny = 2\nz = 3\n```');
+    const range = await markdown.parse('```python lines=1-2\nx = 1\ny = 2\nz = 3\n```');
     check('lines=1-2 区间高亮两行', (range.match(/code-line-highlight/g) ?? []).length === 2, range);
-    const none = markdown.parse('```cpp\nint a;\n```');
+    const none = await markdown.parse('```cpp\nint a;\n```');
     check('无 lines= 不高亮', !none.includes('code-line-highlight'), none);
     check('语言 class 保留', html.includes('class="language-cpp"'), html);
 }
@@ -291,31 +291,44 @@ console.log('\n=== update: checkAppUpdate 三态（mock window.xmoj.app） ===')
         const mod = await import('../src/services/update.ts');
         return mod.checkAppUpdate();
     };
-    const manifest = [
-        { tag_name: 'v1.0.0', prerelease: false, published_at: '2023-07-22T00:00:00Z', body: '初始' },
-        { tag_name: 'v1.1.1', prerelease: false, published_at: '2023-11-14T00:00:00Z', body: '修复' },
-    ];
+    const release = {
+        tag_name: 'v1.1.1',
+        draft: false,
+        prerelease: false,
+        published_at: '2026-10-27T08:00:00Z',
+        body: '## 修复\n- Electron 客户端修复 #7',
+    };
     currentVersion = '1.1.0';
-    fetchResult = { ok: true, status: 200, data: manifest };
+    fetchResult = { ok: true, status: 200, data: release };
     let result = await checkAppUpdate();
     check('1.1.0 vs 1.1.1 -> available', result.status === 'available', result.status);
-    check('latest 为 v1.1.1', result.latest === 'v1.1.1', result.latest);
-    check('entries 含最新版本条目', result.entries.some(e => e.version === 'v1.1.1' && e.notes === '修复'), JSON.stringify(result.entries));
-    check('请求本仓库 Releases API', requested.length === 1 && requested[0]!.includes('api.github.com/repos/XMOJ-Script-dev/XMOJ-Electron/releases'), JSON.stringify(requested));
+    check('latest 为 1.1.1', result.latest === '1.1.1', String(result.latest));
+    check('entries 含 Electron 发布说明', result.entries.some(e => e.version === '1.1.1' && e.notes === release.body), JSON.stringify(result.entries));
+    check('发布日期解析为毫秒', result.entries[0]?.date === Date.parse(release.published_at));
+    check('请求 Electron 最新正式 Release 而非脚本清单', requested.length === 1 && requested[0] === 'https://api.github.com/repos/XMOJ-Script-dev/XMOJ-Electron/releases/latest', JSON.stringify(requested));
+    const { projectLinks, showUpdateDialog } = await import('../src/services/update.ts');
+    check('更新日志链接指向 Electron Releases', projectLinks().find(link => link.label === '更新日志')?.url === 'https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases');
+    await showUpdateDialog(result);
+    const { activeDialog } = await import('./stub-dialog.mjs');
+    check('更新弹窗显示 Electron 发布说明', activeDialog.value?.detail?.includes(release.body) === true);
     currentVersion = '1.10.0';
-    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v1.9.9', prerelease: false }] };
+    fetchResult = { ok: true, status: 200, data: { ...release, tag_name: 'v1.9.9' } };
     result = await checkAppUpdate();
     check('1.10.0 vs 1.9.9 -> current（数值比较非字典序）', result.status === 'current', result.status);
-    check('latest 为 v1.9.9', result.latest === 'v1.9.9', result.latest);
+    check('latest 为 1.9.9', result.latest === '1.9.9', String(result.latest));
     currentVersion = '1.1.1';
-    fetchResult = { ok: true, status: 200, data: manifest };
+    fetchResult = { ok: true, status: 200, data: release };
     result = await checkAppUpdate();
     check('版本相等 -> current', result.status === 'current', result.status);
     currentVersion = '1.1.2-beta';
-    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v1.1.2', prerelease: false }] };
+    fetchResult = { ok: true, status: 200, data: { ...release, tag_name: 'v1.1.2' } };
     result = await checkAppUpdate();
     check('预发布当前版本低于同名正式版 -> available', result.status === 'available', result.status);
-    fetchResult = { ok: true, status: 200, data: manifest };
+    currentVersion = '1.1.1+123';
+    fetchResult = { ok: true, status: 200, data: { ...release, tag_name: 'v1.1.1+456' } };
+    result = await checkAppUpdate();
+    check('构建元数据不影响版本优先级', result.status === 'current', result.status);
+    fetchResult = { ok: true, status: 200, data: release };
     currentVersion = '2.0.0';
     result = await checkAppUpdate();
     check('当前更新 -> current', result.status === 'current', result.status);
@@ -324,17 +337,24 @@ console.log('\n=== update: checkAppUpdate 三态（mock window.xmoj.app） ===')
     check('请求失败 -> unknown', result.status === 'unknown', result.status);
     check('unknown 带 message', result.message === 'HTTP 500', result.message);
     check('unknown 无 latest/entries', result.latest === null && result.entries.length === 0, JSON.stringify(result));
-    fetchResult = { ok: true, status: 200, data: {} };
+    for (const [label, data] of [
+        ['空对象', {}],
+        ['脚本更新清单', { UpdateHistory: { '4.0.0': { Prerelease: false } } }],
+        ['预发布版本', { ...release, tag_name: 'v2.0.0-beta', prerelease: true }],
+        ['草稿', { ...release, draft: true }],
+        ['非法版本标签', { ...release, tag_name: 'not-a-version' }],
+        ['错误响应类型', 'v2.0.0'],
+    ] as const) {
+        fetchResult = { ok: true, status: 200, data };
+        result = await checkAppUpdate();
+        check(`${label} -> unknown`, result.status === 'unknown' && result.latest === null && result.entries.length === 0, JSON.stringify(result));
+    }
+    fetchResult = { ok: false, status: 404, data: null, error: 'HTTP 404' };
     result = await checkAppUpdate();
-    check('空历史 -> unknown', result.status === 'unknown', result.status);
-    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v2.0.0', prerelease: true }, { tag_name: 'v1.5.0', prerelease: false }] };
-    currentVersion = '1.5.0';
+    check('没有正式 Release -> unknown', result.status === 'unknown' && result.message === 'HTTP 404');
+    fetchResult = { ok: true, status: 200, data: { ...release, body: null, published_at: 'invalid' } };
     result = await checkAppUpdate();
-    check('最新为预览版时 latest 取最新正式版', result.latest === 'v1.5.0' && result.status === 'current', JSON.stringify({ latest: result.latest, status: result.status }));
-    check('entries 同时包含正式版与预览版', result.entries.length === 2 && result.entries.some(e => e.version === 'v2.0.0' && e.prerelease), JSON.stringify(result.entries));
-    fetchResult = { ok: true, status: 200, data: [{ tag_name: 'v2.0.0', prerelease: true }] };
-    result = await checkAppUpdate();
-    check('全是预览版 -> unknown', result.status === 'unknown', result.status);
+    check('缺少说明与非法日期可容错', result.status === 'current' && result.entries[0]?.notes === '' && result.entries[0]?.date === null);
 }
 console.log(`\n${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

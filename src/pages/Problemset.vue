@@ -106,7 +106,7 @@ const hasResults = computed(() => visible.value.length > 0);
         <Input
           v-model="draft"
           class="pl-9"
-          placeholder="按标题或内容搜索题目"
+          placeholder="按编号或标题搜索题目"
           :disabled="loading"
         />
       </div>
