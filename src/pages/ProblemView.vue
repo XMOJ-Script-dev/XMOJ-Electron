@@ -126,14 +126,14 @@ onMounted(() => {
         </p>
       </div>
       <Button
-      v-if="contestId > 0"
-      variant="outline"
-      size="sm"
-      @click="navigation.viewContest(contestId)"
-    >
-      <ChevronLeft />
-      返回竞赛
-    </Button>
+        v-if="contestId > 0"
+        variant="outline"
+        size="sm"
+        @click="navigation.viewContest(contestId)"
+      >
+        <ChevronLeft />
+        返回竞赛
+      </Button>
       <form class="flex flex-wrap items-center gap-2" @submit.prevent="load(true)">
         <Input
           id="problem-view-id"
@@ -149,7 +149,6 @@ onMounted(() => {
         </Button>
       </form>
     </div>
-    
 
     <div v-if="loading && !problem" class="space-y-2">
       <Skeleton class="h-10 w-full rounded-lg" />
