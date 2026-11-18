@@ -14,6 +14,16 @@ function record(ok, label, detail) {
     console.log(`  [${ok ? 'PASS' : 'FAIL'}] ${label}${detail ? ` :: ${detail}` : ''}`);
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(probe, timeoutMs = 30000, intervalMs = 500) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const value = await probe();
+        if (value)
+            return value;
+        await wait(intervalMs);
+    }
+    return null;
+}
 app.on('ready', async () => {
     await import(new URL('../dist-electron/main.js', import.meta.url).href);
     let win = null;
@@ -532,33 +542,74 @@ app.on('ready', async () => {
     record(shellState.blankTargets === 0, 'no link opens a browser tab', `${shellState.blankTargets}`);
     record(!shellState.sidebarEntries.some((label) => /站内浏览/.test(label)), 'the 站内浏览 entry is gone', JSON.stringify(shellState.sidebarEntries));
     await clickSidebar('竞赛&作业');
-    await wait(7000);
-    await win.webContents.executeJavaScript(`(() => {
-    const list = document.querySelector('.divide-y')
-    const first = list ? list.querySelector('button') : null
-    if (first) first.click()
-  })()`);
-    await wait(7000);
-    const rankOpened = await win.webContents.executeJavaScript(`(() => {
-    const button = Array.from(document.querySelectorAll('button')).find((b) => /OI 排名/.test(b.textContent))
-    if (!button) return false
-    button.click()
-    return true
-  })()`);
-    record(rankOpened, 'contest detail offers the native OI ranking');
+    const contestOrder = await until(() => win.webContents.executeJavaScript(`(() => {
+    const items = Array.from(document.querySelectorAll('.divide-y > button'))
+    if (!items.length) return null
+    const ended = []
+    const running = []
+    const rest = []
+    items.forEach((item, index) => {
+      const text = item.textContent
+      if (text.includes('已结束')) ended.push(index)
+      else if (text.includes('进行中')) running.push(index)
+      else rest.push(index)
+    })
+    return ended.concat(running, rest)
+  })()`), 30000);
+    record(Array.isArray(contestOrder) && contestOrder.length > 0, 'contest list rendered entries', JSON.stringify(contestOrder ?? []));
+    let rankOpened = false;
     let rankTable = { rows: 0, headers: 0, text: '' };
-    const rankDeadline = Date.now() + 25000;
-    while (Date.now() < rankDeadline) {
-        rankTable = await win.webContents.executeJavaScript(`(() => {
-      const rows = document.querySelectorAll('table tbody tr').length
-      const text = document.body.textContent
-      return { rows, headers: document.querySelectorAll('table thead th').length, text: text.slice(0, 120) }
+    const attempts = (contestOrder ?? []).slice(0, 6);
+    for (const index of attempts) {
+        await win.webContents.executeJavaScript(`(() => {
+      const items = Array.from(document.querySelectorAll('.divide-y > button'))
+      if (items[${index}]) items[${index}].click()
     })()`);
-        if (rankTable.rows > 0)
-            break;
-        await wait(700);
+        const detailReady = await until(() => win.webContents.executeJavaScript(`(() => {
+      const button = Array.from(document.querySelectorAll('button')).find((b) => /OI 排名/.test(b.textContent))
+      return button ? true : null
+    })()`), 25000);
+        if (detailReady) {
+            const clicked = await win.webContents.executeJavaScript(`(() => {
+        const button = Array.from(document.querySelectorAll('button')).find((b) => /OI 排名/.test(b.textContent))
+        if (!button) return false
+        button.click()
+        return true
+      })()`);
+            rankOpened = rankOpened || clicked;
+            await until(() => win.webContents.executeJavaScript(`(() => {
+        const rows = document.querySelectorAll('table tbody tr').length
+        if (rows > 0) return true
+        const panel = document.querySelector('[data-slot="dialog-content"]')
+        return panel && /该比赛还没有排名数据|加载失败/.test(panel.textContent) ? true : null
+      })()`), 25000);
+            rankTable = await win.webContents.executeJavaScript(`(() => {
+        const panel = document.querySelector('[data-slot="dialog-content"]')
+        return {
+          rows: document.querySelectorAll('table tbody tr').length,
+          headers: document.querySelectorAll('table thead th').length,
+          text: panel ? panel.textContent : '',
+        }
+      })()`);
+            await win.webContents.executeJavaScript(`(() => {
+        const close = Array.from(document.querySelectorAll('button')).find((b) => b.textContent.trim() === '关闭')
+        if (close) close.click()
+      })()`);
+            await wait(1000);
+            if (rankTable.rows > 0)
+                break;
+        }
+        await win.webContents.executeJavaScript(`(() => {
+      const back = Array.from(document.querySelectorAll('button')).find((b) => /返回列表/.test(b.textContent))
+      if (back) back.click()
+    })()`);
+        await until(() => win.webContents.executeJavaScript(`(() => {
+      const items = document.querySelectorAll('.divide-y > button').length
+      return document.body.textContent.includes('场比赛') && items > 0 ? true : null
+    })()`), 20000);
     }
-    record(rankTable.rows > 0, 'ranking table rendered rows', `rows=${rankTable.rows}`);
+    record(rankOpened, 'contest detail offers the native OI ranking', `attempts=${attempts.length}`);
+    record(rankTable.rows > 0, 'ranking table rendered rows', `rows=${rankTable.rows} headers=${rankTable.headers}`);
     record(!/加载失败/.test(rankTable.text), 'ranking loaded without error');
     await win.webContents.executeJavaScript(`(() => {
     const close = Array.from(document.querySelectorAll('button')).find((b) => b.textContent.trim() === '关闭')

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="XMOJ Electron 完整使用文档：安装、登录、题库、提交、赛事、讨论、个人数据、隐私与故障排除。">
+  <meta name="theme-color" content="#f7f9f5">
+  <title>使用文档 · XMOJ Electron</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="./docs.css">
+</head>
+<body>
+  <header class="nav wrap">
+    <a class="brand" href="../"><span class="mark">X</span> XMOJ Electron</a>
+    <nav aria-label="主导航"><a href="../#features">产品功能</a><a href="../#download">下载</a><a href="./" aria-current="page">使用文档</a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">GitHub ↗</a></nav>
+  </header>
+  <main class="wrap docs-layout">
+    <aside class="docs-sidebar" aria-label="文档目录">
+      <strong>文档目录</strong>
+      <a href="#overview">项目简介</a>
+      <a href="#web-version">桌面版与网页版</a>
+      <a href="#install">下载安装</a>
+      <a href="#first-run">首次使用</a>
+      <a href="#features">功能指南</a>
+      <a href="#site-home">首页与月赛</a>
+      <a href="#identity">账号展示</a>
+      <a href="#problemset">题库与题面</a>
+      <a href="#submissions">提交与状态</a>
+      <a href="#contests">竞赛、排名与回放</a>
+      <a href="#community">讨论、消息与通知</a>
+      <a href="#personal-tools">个人主页与代码工具</a>
+      <a href="#downloads">下载与应用信息</a>
+      <a href="#markdown">Markdown 与公式</a>
+      <a href="#settings">设置、缓存与同步</a>
+      <a href="#privacy">账号、隐私与安全</a>
+      <a href="#troubleshooting">故障排除</a>
+      <a href="#development">从源码构建</a>
+      <a href="#support">反馈与支持</a>
+    </aside>
+    <article class="docs-content">
+      <p class="eyebrow">USER GUIDE · 更新于 2026</p>
+      <h1>XMOJ Electron 使用文档</h1>
+      <p class="docs-lead">这是一份面向使用者和开发者的完整指南，涵盖安装、日常训练流程、账号与数据、常见问题以及从源码运行。客户端版本和界面可能持续变化；下载与更新信息以项目的 <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases">GitHub Releases</a> 为准。</p>
+      <div class="callout"><strong>项目定位</strong><p>XMOJ Electron 是连接小明 OJ（xmoj.tech）的社区开源桌面客户端，不是小明 OJ 官方产品。完整功能由桌面客户端提供，另有功能受限的网页版可直接在浏览器中使用；判题服务、社区服务及其账号规则仍由对应服务提供方管理。</p></div>
+
+      <section id="overview">
+        <h2>项目简介</h2>
+        <p>客户端将题库、题面、提交状态、赛事、讨论和个人解题记录整合到 Electron 桌面应用中。主进程负责网络请求、会话和桌面能力，界面使用 Vue 与 TypeScript 构建。</p>
+        <ul><li><strong>平台：</strong>项目发布 Windows、macOS、Linux 安装包；具体平台、格式和架构以每个 Release 的文件为准。</li><li><strong>许可：</strong><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/blob/master/LICENSE">GPL-3.0</a>。</li><li><strong>所需账号：</strong>需要可正常使用的小明 OJ 账号；部分社区功能还需要社区服务可用。</li><li><strong>网络：</strong>登录及同步数据需要连接小明 OJ 或相应社区服务。少量已缓存页面可在断网时查看。</li></ul>
+        <h3 id="web-version">桌面版与网页版</h3>
+        <p>无需安装的网页版位于 <a href="https://webxmoj.xmoj-script.uk/">webxmoj.xmoj-script.uk</a>，由本项目仓库通过 Cloudflare Pages 构建；登录认证与数据转发都在服务端完成，浏览器不接触小明 OJ 的会话 Cookie。网页版可匿名浏览首页、月赛、软件下载和公开用户主页，登录后还可使用题库、题面、提交状态、竞赛、讨论、私信、通知、代码提交与云同步设置。</p>
+        <p>桌面版保留全部能力：本机文件导出、AC 代码打包、竞赛视频回放、应用更新检查、原生退出确认，以及保存在本机的登录信息与设置。网页版的偏好只保存在当前浏览器、不随账号同步，同一账号在桌面版和网页版的登录状态也互相独立。</p>
+      </section>
+
+      <section id="install">
+        <h2>下载安装</h2>
+        <ol>
+          <li>打开<a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/releases/latest">最新稳定版</a>，核对版本说明、系统和架构。</li>
+          <li>下载对应安装包。Windows 发布 <code>.exe</code>，macOS 发布 <code>.dmg</code>，Linux 发布 <code>.AppImage</code>。</li>
+          <li>按操作系统的常规方式安装并启动。Linux AppImage 可能需要在文件属性中允许执行，或使用系统提供的 AppImage 启动方式。</li>
+        </ol>
+        <p>只从项目 GitHub Releases 获取安装包。项目当前不在此文档中提供独立校验和；不要仅凭文件名判断安装包是否可信。若系统提示应用无法打开，请核对下载来源和系统安全提示，勿为绕过提示而执行来历不明的文件。</p>
+        <h3>更新客户端</h3>
+        <p>在应用的侧栏底部打开「关于 / 检查更新」，或手动查看 Releases。更新提示使用项目更新数据源；需要下载新版本时，应以项目发布页提供的正式文件为准。安装新版本前可先关闭客户端。</p>
+        <h3>卸载</h3>
+        <p>使用操作系统的应用卸载方式移除程序。用户数据和缓存位于 Electron 的应用数据目录，卸载程序不一定会自动删除它们。若要清理数据，请先确认对应目录并备份需要保留的内容；删除数据会清除本地会话、缓存和设置。</p>
+      </section>
+
+      <section id="first-run">
+        <h2>首次使用与登录</h2>
+        <ol>
+          <li>启动应用，在登录页输入小明 OJ 账号和密码。</li>
+          <li>成功登录后，客户端加载首页、题库和账户相关信息。首次加载可能需要较长时间，尤其是题库需要获取多个分页。</li>
+          <li>如使用「记住密码」，应用会在本机保存登录所需信息，以便启动时尝试静默重新登录。只在个人可信设备上启用。</li>
+        </ol>
+        <p>使用应用提供的退出登录操作结束当前会话；在公用设备上尤其要确认已退出。更换账号时先退出当前账号，再用另一账号登录。</p>
+        <div class="callout warning"><strong>账号安全</strong><p>不要在 Issue、截图、日志或聊天中公开密码、Cookie、验证码令牌或私信内容。公共或他人设备使用后请退出登录，并避免启用记住密码。</p></div>
+        <p>登录失败时，请先确认账号能否通过小明 OJ 官方网站登录、网络是否可用，以及账号是否需要重新验证。反复登录失败时不要把密码发给项目维护者；报告时只需描述错误现象和客户端版本。</p>
+      </section>
+
+      <section id="features">
+        <h2>功能指南与操作说明</h2>
+        <p>应用侧栏用于切换首页、题库、提交状态、竞赛、社区及其他工具；部分功能从对应内容页的按钮进入，而不是在侧栏单独占一项。需要登录的操作会使用当前小明 OJ 账号。页面载入或操作失败时，请先查看页面提示和底部通知，再检查网络及账号权限。</p>
+
+        <h3 id="site-home">首页、公告与月赛</h3>
+        <p>首页汇总判题站公告、社区服务公告、推荐内容、服务器时间和赛事倒计时。公告和服务公告支持格式化内容；点击公告内链接可查看对应详情。服务器时钟与站点时间同步，用于参考比赛时间。</p>
+        <p>月赛页展示月赛相关公告、我的月赛与倒计时。它采用独立的双栏首页布局，不展示首页中的推荐位、服务公告、QQ群信息和复制按钮；服务器时间仅在首页显示。</p>
+
+        <h3 id="identity">账号、头像与用户标识</h3>
+        <p>登录表单使用小明 OJ 账号。启用记住密码后，客户端在本机保留启动时静默重新登录所需的信息。用户头像可按账号邮箱从 Cravatar 服务加载；显示名和用户标签在可用时取自判题站导航接口与社区服务。头像或标签服务不可用时，相关装饰信息可能缺失，不代表登录账号发生变化。</p>
+
+        <h3 id="problemset">题库与题目详情</h3>
+        <p>题库会汇总判题站的分页结果，然后在客户端按每页 20 题分页；可按题目标题或编号搜索并翻页。首次获取全部分页时耗时可能较长。选择列表中的一行即可打开题面。</p>
+        <p>题面根据原站内容分块展示为信息卡片，样例输入和输出各自独立显示。样例卡片可单独复制，复制成功后按钮会短暂显示「已复制」。实体字符会还原为可读字符；如果原站提供可读的参考代码，可在题面查看。题面中的公告式 Markdown、代码块和公式渲染细节见 <a href="#markdown">Markdown 与公式</a>。</p>
+
+        <h3 id="submissions">编写代码、提交与评测状态</h3>
+        <p>从题面打开「提交代码」进入 Monaco 编辑器，选择判题站支持的语言以及是否启用 O2。提交前检查会检查常见文件、拼写、括号和头文件问题；它是辅助检查，不能代替编译或评测。草稿按题目保存，便于稍后继续编写。</p>
+        <p>提交后在状态页查看评测记录。页面提供多条件筛选和基于游标的翻页；评测结果按结论类型着色区分，包括 AC、WA、RE、CE、TLE、MLE 等常见结果，未知结果以中性色显示。只有等待或评测中的记录会继续轮询；已完成和未知状态不会持续轮询。可从提交记录打开对应源码。</p>
+        <p>在状态页可进入代码对比，选择两次提交查看逐行差异、行号和差异统计。对比前确认两份提交的题目、账号和语言符合预期。</p>
+
+        <h3 id="contests">竞赛、作业、排名与回放</h3>
+        <p>竞赛列表支持翻页，并区分进行中、未开始和已结束的比赛。进入比赛可查看比赛题目；题号颜色提示已通过、未通过或仍在评测等状态。比赛详情内可打开 OI 排名或订正排名，以浮层表格查看成绩。</p>
+        <p>对于原站开放回放且当前账号获得点播授权的比赛，可从比赛详情进入回放。回放界面铺满应用内容区，支持进度调整、音量、倍速和关闭；按 Esc 或关闭控件退出时会停止播放。回放内容与访问权由原站提供，客户端不能为账号授予未开放的权限。</p>
+
+        <h3 id="community">讨论、短消息与未读提醒</h3>
+        <p>讨论页可浏览板块及分页主题，查看帖子、引用内容并回复。编辑和删除操作只在脚本管理员、帖子作者或板块锁定规则允许时显示。发帖和回复表单使用 Markdown 编辑器与实时预览；遇到 Cloudflare 验证时，在表单内完成验证。通过后验证区会保持显示，失败或过期时按提示重新验证。</p>
+        <p>短消息页提供会话列表、消息内容和发送功能。新建会话前会检查目标用户是否存在。社区未读提及会通过应用通知提示；未读数据读取或发送消息仍受社区服务可用性和账号权限影响。</p>
+
+        <h3 id="personal-tools">个人主页、代码对比与 AC 代码导出</h3>
+        <p>个人主页展示个人统计图表和已解决题目列表，可按题号筛选；点击题目可直接进入题面。代码对比入口位于状态页，用于比较同一题目的两次提交，而不是比较两个用户的个人主页。</p>
+        <p>在侧栏底部的「导出 AC 代码」页面中，可从当前账号的已解决题目里选择题目，再按所选语言寻找原站可读取的通过代码，显示处理进度并打包为 ZIP。导出结果取决于原站是否能提供对应源码；不可读取或没有匹配语言代码的题目不会因此生成源码。</p>
+
+        <h3 id="downloads">下载页、关于与通知</h3>
+        <p>下载页以卡片展示软件列表。下载站内文件时可先选择保存位置，下载进度卡片可终止任务；站外链接交由系统默认浏览器打开。下载失败时先检查网络、磁盘空间和保存目录权限。</p>
+        <p>侧栏底部的关于面板显示客户端版本并提供检查更新入口。版本号来自应用版本信息，更新说明来自项目更新数据源；最终安装文件以 GitHub Releases 为准。操作错误和警告通过底部通知显示，社区未读提醒也可能以通知出现。</p>
+      </section>
+
+      <section id="markdown">
+        <h2>Markdown、公式与代码块</h2>
+        <p>公告、题面和讨论支持 GFM 表格、任务列表、KaTeX 数学公式，以及洛谷编辑器风格的部分扩展语法：</p>
+        <ul>
+          <li>提示容器：独占一行的 <code>:::info[标题]</code>、<code>:::success[标题]</code>、<code>:::warning[标题]</code>、<code>:::error[标题]</code>；标题后加 <code>{open}</code> 可默认展开。</li>
+          <li>对齐和题记：独占行的 <code>:::align{left}</code>、<code>:::align{center}</code>、<code>:::align{right}</code>，以及 <code>:::epigraph[——作者]</code>。</li>
+          <li>容器以独立一行的 <code>:::</code> 结束并支持嵌套；父容器的冒号数量须多于子容器，例如外层 <code>::::</code>、内层 <code>:::</code>。</li>
+          <li>表格单元格使用 <code>&lt;</code> 向左合并、<code>^</code> 向上合并；无效合并标记按普通文本显示。表格前写 <code>::cute-table{three}</code> 或 <code>::cute-table{tuack}</code> 可切换样式，<code>::cute-table{tuack=3}</code> 可加粗第 3 列之后的竖线。</li>
+          <li>反引号或波浪线代码围栏支持语法高亮和指定行号，例如 <code>```cpp lines=2-3,5</code>。未写语言时默认 C++；<code>plain</code> 和未知语言按纯文本显示。</li>
+          <li>内置高亮语言包括 C/C++、Python、Java、JavaScript / TypeScript、Bash、JSON、HTML 和 CSS。代码块中的公式和容器标记不会作为 Markdown 扩展解析。</li>
+        </ul>
+        <p>渲染后的 HTML 会经过 DOMPurify 消毒。Markdown 展示并不意味着其中的任意 HTML 或脚本都会执行。</p>
+      </section>
+
+      <section id="settings">
+        <h2>设置、缓存与同步</h2>
+        <p>设置面板提供以下偏好：</p>
+        <ul><li><strong>外观：</strong>亮色、暗色或跟随系统；可调整界面动画。</li><li><strong>时间和数字：</strong>选择时间单位显示方式及是否使用相对时间。</li><li><strong>刷新行为：</strong>控制支持页面的自动刷新。</li><li><strong>退出保护：</strong>控制离开前是否确认，避免误关正在进行的操作。</li><li><strong>云同步：</strong>手动触发后，通过社区设置接口读取或写入支持同步的偏好。</li></ul>
+        <p>界面偏好保存在本机；云同步不是后台自动上传所有应用数据的功能，只处理用户主动同步的设置数据。账号、草稿、提交源码、下载文件和页面缓存不等同于同步设置。离线时云同步不可用。</p>
+        <p>部分页面具有本地缓存，可在断网时展示先前获取的数据。缓存可能过期，或先显示旧数据再后台刷新；因此离线内容和首屏内容不一定是最新值。注销、切换账号、缓存过期或清理应用数据都会影响本机可用缓存和登录状态。</p>
+        <p>若页面内容看起来过时，先检查网络并重新打开页面，判断其是否来自缓存。需要清理数据时只使用应用本身提供的操作或已确认的应用数据目录；不要删除不明系统目录。</p>
+      </section>
+
+      <section id="privacy">
+        <h2>账号、隐私与安全</h2>
+        <ul>
+          <li>客户端需要向小明 OJ 发起请求来登录、读取题目和提交代码；社区、头像等功能可能访问对应的社区或头像服务。</li>
+          <li>登录会话由桌面客户端管理，并通过会话 Cookie 保持登录。启用记住密码会允许本机保存启动时重新登录所需的信息；请只在可信设备启用。</li>
+          <li>头像服务可能接收用于获取头像的邮箱 MD5 摘要；客户端不应将密码、Cookie 或验证码令牌放入公开反馈内容。</li>
+          <li>应用偏好保存在本机。云同步只在用户显式操作时请求同步支持的设置，不应理解为整台设备或所有应用数据的备份。</li>
+          <li>提交的源代码、讨论内容、私信、比赛和账号数据会按目标服务的规则处理。请在提交或发送前确认内容与目标账号。</li>
+          <li>本项目是开源客户端，但这不代表其依赖的第三方服务由项目维护者运营，也不代表服务端数据会被本项目控制。</li>
+          <li>遇到安全问题时，请不要公开发布密码、令牌、可利用步骤或他人数据；通过项目仓库中维护者认可的私下渠道联系项目维护者。</li>
+        </ul>
+        <p>涉及账号访问、内容保存和第三方服务的具体政策，请查看相应服务的官方说明。项目不要求用户向维护者提供账号密码来排查问题。</p>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>故障排除</h2>
+        <div class="faq">
+          <details><summary>应用打不开或安装包启动失败</summary><p>确认文件来自项目 Releases，并匹配操作系统与架构。Windows/macOS 可能显示系统安全提示；Linux AppImage 可能需要执行权限。不要用不可信来源的替代安装包。</p></details>
+          <details><summary>登录失败或登录后功能不可用</summary><p>先在浏览器确认账号状态和服务可访问，再检查客户端网络连接。社区服务、Cloudflare 验证和回放授权由对应服务及账号状态决定；服务暂不可用时，相关功能可能无法工作。</p></details>
+          <details><summary>题库首次加载很慢、列表未更新</summary><p>题库需要汇总多个分页，首次加载可能比后续访问慢。检查网络，等待加载完成后重试；若显示旧内容，可能正在展示缓存并等待后台刷新。</p></details>
+          <details><summary>无法发帖或回复</summary><p>按提示完成 Cloudflare 验证，检查验证是否过期、网络是否可用以及当前账号是否具有相应权限。</p></details>
+          <details><summary>下载失败或找不到文件</summary><p>确认目标磁盘空间和保存权限，检查下载是否被主动取消。站外资源由默认浏览器处理，请在浏览器中查看结果。</p></details>
+          <details><summary>如何报告缺陷</summary><p>先搜索已有 Issues，再提供操作系统、客户端版本、相关页面、复现步骤和脱敏错误信息。不要附密码、Cookie、验证码令牌、私信或未公开源代码。</p></details>
+        </div>
+      </section>
+
+      <section id="development">
+        <h2>从源码构建</h2>
+        <p>开发需要 Node.js 与 npm。以下命令在仓库根目录执行：</p>
+        <pre><code>npm install
+npx install-electron
+npm run dev</code></pre>
+        <p>此项目使用的 Electron npm 包不一定会在安装依赖时自动下载 Electron 二进制；如果启动时提示缺少 Electron，可运行 <code>npx install-electron</code>。</p>
+        <p>常用校验与构建命令：</p>
+        <pre><code>npm run typecheck
+npm test
+npx vite build
+npm run build:dir
+npm run build</code></pre>
+        <ul><li><code>npm run typecheck</code>：Vue / TypeScript 类型检查。</li><li><code>npm test</code>：基础解析器校验。</li><li><code>npx vite build</code>：构建界面资源。</li><li><code>npm run build:dir</code>：类型检查、构建界面并生成未打包应用目录。</li><li><code>npm run build</code>：类型检查、构建界面并打包当前平台安装程序。</li></ul>
+        <p>部分测试会访问真实服务或需要登录账号；运行前查看仓库 README 中各测试的说明。不要把账号凭据提交到仓库。无法直连 GitHub 下载 Electron 或打包工具时，README 提供了可选镜像设置。</p>
+        <p>完整源码、测试说明和变更记录见 <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">GitHub 仓库 README</a>。</p>
+      </section>
+
+      <section id="support">
+        <h2>反馈与支持</h2>
+        <p>功能建议和可复现缺陷可提交到 <a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/issues">GitHub Issues</a>。请说明客户端版本、系统版本和复现步骤；先确认不是网络、账号权限或服务端暂时不可用导致。</p>
+        <p>请勿通过 Issue 发布账号信息、Cookie、验证码令牌、私人消息或任何需要保密的内容。本项目由社区维护，不提供账号找回或判题站服务端支持。</p>
+        <p class="docs-back"><a class="text-link" href="../">← 返回项目主页</a></p>
+      </section>
+    </article>
+  </main>
+  <footer class="wrap"><span>XMOJ Electron · GPL-3.0 开源桌面客户端</span><div><a href="../">项目主页</a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron/issues">反馈问题 ↗</a><a href="https://github.com/XMOJ-Script-dev/XMOJ-Electron">源代码 ↗</a></div></footer>
+</body>
+</html>
