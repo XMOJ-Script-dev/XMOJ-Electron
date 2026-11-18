@@ -334,10 +334,10 @@ export function installWebApi(): void {
             },
         },
         home: {
-            snapshot: async (cacheOnly = false) => (cacheOnly ? homeSnapshotCache : loadHomeSnapshot()),
+            snapshot: async (cacheOnly = false) => (cacheOnly && homeSnapshotCache ? homeSnapshotCache : loadHomeSnapshot()),
         },
         monthly: {
-            board: async (cacheFirst = false) => (cacheFirst ? monthlyBoardCache : loadMonthlyBoard()),
+            board: async (cacheFirst = false) => (cacheFirst && monthlyBoardCache ? monthlyBoardCache : loadMonthlyBoard()),
         },
         downloads: {
             list: async () => SOFTWARE,
