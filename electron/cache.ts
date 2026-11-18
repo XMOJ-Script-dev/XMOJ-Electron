@@ -5,7 +5,7 @@ interface Entry {
     value: unknown;
     fetchedAt: number;
 }
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 interface DiskPayload {
     version?: number;
     entries?: Record<string, Entry>;

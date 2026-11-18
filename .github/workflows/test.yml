@@ -56,7 +56,7 @@ jobs:
           Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
           $ErrorActionPreference = 'Continue'
           $suites = @(
-            'test',
+            'test:offline',
             'test:poller',
             'test:codecheck',
             'test:diff',

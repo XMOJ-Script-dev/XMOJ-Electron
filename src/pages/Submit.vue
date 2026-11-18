@@ -13,7 +13,9 @@ import type { ProblemDetail } from '@/shared/types';
 const navigation = useNavigation();
 const props = withDefaults(defineProps<{
     problemId?: number;
-}>(), { problemId: 0 });
+    contestId?: number;
+    contestPid?: number;
+}>(), { problemId: 0, contestId: 0, contestPid: -1 });
 const problem = ref<ProblemDetail | null>(null);
 const problemId = ref(props.problemId || 0);
 const languageId = ref(1);
@@ -56,6 +58,9 @@ const issues = computed<CodeIssue[]>(() => checkSource(source.value, {
     languageId: languageId.value,
 }));
 const blockingIssues = computed(() => issues.value.filter((i) => i.severity === 'error'));
+const contestContext = computed(() => (props.contestId > 0 && props.contestPid >= 0 && Number(problemId.value) === props.problemId
+    ? { contestId: props.contestId, contestPid: props.contestPid }
+    : null));
 async function load(): Promise<void> {
     const id = Number(problemId.value);
     if (!Number.isFinite(id) || id <= 0) {
@@ -95,6 +100,7 @@ async function submit(): Promise<void> {
             languageId: languageId.value,
             source: source.value,
             enableO2: enableO2.value,
+            ...(contestContext.value ?? {}),
         });
         if (!response.ok)
             throw new Error(response.message || '提交失败');
@@ -174,6 +180,9 @@ onMounted(() => {
 
     <template v-else>
       <div v-if="problem" class="flex flex-wrap items-center gap-2 text-sm">
+        <span v-if="contestContext" class="rounded-md border border-primary/40 bg-primary/10 px-2 py-1">
+          比赛 #{{ contestContext.contestId }} 提交
+        </span>
         <span v-if="problem.timeLimitMs" class="rounded-md border px-2 py-1">
           时间
           {{ problem.timeLimitMs >= 1000 ? `${problem.timeLimitMs / 1000} s` : `${problem.timeLimitMs} ms` }}

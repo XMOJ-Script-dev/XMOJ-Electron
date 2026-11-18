@@ -1,4 +1,7 @@
 import { PageCache } from '../electron/cache.ts';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 let failures = 0;
 function check(label: string, condition: boolean, detail = '') {
     if (!condition)
@@ -54,6 +57,34 @@ console.log('\n=== values survive as-is ===');
     const back = cache.get<typeof payload>('contest:list:1')?.value;
     check('object identity preserved in memory', back === payload);
     check('nested values intact', back?.list[0]?.title === '题目', String(back?.list[0]?.title));
+}
+console.log('\n=== persisted cache migration ===');
+{
+    const directory = mkdtempSync(path.join(tmpdir(), 'xmoj-cache-migration-'));
+    try {
+        const file = path.join(directory, 'page-cache.json');
+        writeFileSync(file, JSON.stringify({
+            version: 3,
+            entries: {
+                'problemset:v2:all': { value: { problems: [{ id: 11710, title: '小时降水量' }] }, fetchedAt: Date.now() },
+                'contest:list:1': { value: { list: [{ createdBy: 'alice' }] }, fetchedAt: Date.now() },
+                'home:snapshot': { value: { countdown: [] }, fetchedAt: Date.now() },
+            },
+        }));
+        const cache = new PageCache(directory);
+        check('v3 题库标题缓存失效', cache.get('problemset:v2:all') === null);
+        check('v3 比赛创建者缓存失效', cache.get('contest:list:1') === null);
+        check('v3 倒计时缓存失效', cache.get('home:snapshot') === null);
+        const payload = { problems: [{ id: 11710, title: '24小时降水量' }] };
+        cache.set('problemset:v2:all', payload);
+        const saved = JSON.parse(readFileSync(file, 'utf8'));
+        check('新缓存写入 v4 格式', saved.version === 4);
+        const restored = new PageCache(directory).get<typeof payload>('problemset:v2:all');
+        check('新缓存可跨实例恢复正确标题', restored?.value.problems[0]?.title === '24小时降水量' && restored.fromCache);
+    }
+    finally {
+        rmSync(directory, { recursive: true, force: true });
+    }
 }
 console.log(`\n${failures === 0 ? 'ALL CACHE CHECKS PASSED' : `${failures} CACHE CHECK(S) FAILED`}\n`);
 process.exit(failures === 0 ? 0 : 1);
